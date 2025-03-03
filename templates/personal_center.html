@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}个人中心 - 求职平台{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <div class="personal-section">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="avatar">
+                    <!-- 用户头像 -->
+                </div>
+                <div class="profile-info">
+                    <h2>{{ user }}</h2>
+                    <p>求职意向：算法工程师</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <h3>投递记录</h3>
+                <div class="application-list">
+                    <!-- 投递记录列表 -->
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>面试记录</h3>
+                <div class="interview-list">
+                    <!-- 面试记录列表 -->
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>收藏职位</h3>
+                <div class="favorite-jobs">
+                    <!-- 收藏的职位列表 -->
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>账号设置</h3>
+                <div class="settings-list">
+                    <button class="settings-btn">修改密码</button>
+                    <button class="settings-btn">隐私设置</button>
+                    <button class="settings-btn">消息通知</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - 求职平台{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>用户注册</h2>
+        <form method="POST" action="{{ url_for('register') }}">
+            {{ form.csrf_token }}
+            <div class="form-group">
+                {{ form.username(placeholder="请输入用户名") }}
+                {% if form.username.errors %}
+                {% for error in form.username.errors %}
+                <div class="error-message">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.phone(placeholder="请输入手机号") }}
+                {% if form.phone.errors %}
+                {% for error in form.phone.errors %}
+                <div class="error-message">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.password(placeholder="请设置密码") }}
+                {% if form.password.errors %}
+                {% for error in form.password.errors %}
+                <div class="error-message">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.confirm_password(placeholder="请确认密码") }}
+                {% if form.confirm_password.errors %}
+                {% for error in form.confirm_password.errors %}
+                <div class="error-message">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <button type="submit" class="auth-submit">注册</button>
+            </div>
+            <div class="auth-links">
+                <a href="{{ url_for('login') }}">已有账号？立即登录</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

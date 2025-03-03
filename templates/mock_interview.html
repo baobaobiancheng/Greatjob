@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}模拟面试 - 求职平台{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <div class="interview-section">
+        <h2>模拟面试</h2>
+
+        <div class="interview-setup">
+            <div class="position-select">
+                <h3>选择面试岗位</h3>
+                <select>
+                    <option>算法工程师</option>
+                    <option>前端开发工程师</option>
+                    <option>后端开发工程师</option>
+                </select>
+            </div>
+
+            <div class="difficulty-select">
+                <h3>选择难度</h3>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn">初级</button>
+                    <button class="difficulty-btn">中级</button>
+                    <button class="difficulty-btn">高级</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="interview-chat">
+            <div class="chat-messages">
+                <!-- 面试对话内容将在这里显示 -->
+            </div>
+            <div class="chat-input">
+                <input type="text" placeholder="输入你的回答...">
+                <button class="send-btn">发送</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 面试相关的JavaScript代码
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+</script>
+{% endblock %}
