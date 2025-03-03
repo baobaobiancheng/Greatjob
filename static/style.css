@@ -1,0 +1,922 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+}
+
+header {
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: #333;
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+nav ul li a.active {
+    color: #00b38a;
+}
+
+.auth-buttons button {
+    padding: 8px 20px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.register {
+    background-color: transparent;
+    color: #333;
+}
+
+.login {
+    background-color: #00b38a;
+    color: white;
+}
+
+.banner {
+    background-color: #ffd700;
+    padding: 40px;
+    text-align: center;
+}
+
+.job-info {
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.info-row {
+    display: flex;
+    margin: 10px 0;
+}
+
+.label {
+    width: 100px;
+    color: #666;
+}
+
+.value {
+    color: #333;
+}
+
+.position-section {
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.ai-assistant {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+}
+
+.assistant-box {
+    background-color: #00b38a;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* 登录注册页面样式 */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f5f5f5;
+}
+
+.auth-box {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.auth-box h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.auth-submit {
+    width: 100%;
+    padding: 12px;
+    background-color: #00b38a;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.auth-submit:hover {
+    background-color: #009b74;
+}
+
+.auth-links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.auth-links a {
+    color: #00b38a;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+/* 内容容器 */
+.content-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+/* 分析卡片样式 */
+.analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.analysis-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.analysis-card h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* 职位分析页面样式 */
+.job-search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.job-search input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.job-search button {
+    padding: 10px 20px;
+    background-color: #00b38a;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.job-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 建议列表样式 */
+.suggestions {
+    list-style: none;
+}
+
+.suggestions li {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.suggestions li:last-child {
+    border-bottom: none;
+}
+
+/* 简历页面样式 */
+.resume-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.resume-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-form .form-row {
+    display: flex;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.info-form label {
+    width: 80px;
+    color: #666;
+}
+
+.add-button {
+    padding: 8px 16px;
+    background-color: #f5f5f5;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    color: #666;
+    cursor: pointer;
+    width: 100%;
+}
+
+/* 模拟面试页面样式 */
+.interview-setup {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.difficulty-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.difficulty-btn {
+    padding: 8px 20px;
+    border: 1px solid #00b38a;
+    border-radius: 4px;
+    background: transparent;
+    color: #00b38a;
+    cursor: pointer;
+}
+
+.difficulty-btn.active {
+    background: #00b38a;
+    color: white;
+}
+
+.interview-chat {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-messages {
+    height: 400px;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* 个人中心页面样式 */
+.profile-card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.avatar {
+    width: 100px;
+    height: 100px;
+    background: #f5f5f5;
+    border-radius: 50%;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-btn {
+    padding: 10px;
+    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.settings-btn:hover {
+    background: #f5f5f5;
+}
+
+/* 消息提示样式 */
+.flash-messages {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+.flash-message {
+    padding: 10px 20px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.flash-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+/* 用户名显示样式 */
+.username {
+    margin-right: 15px;
+    color: #333;
+    font-size: 14px;
+}
+
+.logout {
+    padding: 8px 20px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.logout:hover {
+    background-color: #c82333;
+}
+
+/* 表单错误提示样式 */
+.error-message {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.form-group input.error {
+    border-color: #dc3545;
+}
+
+.form-group input.error:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* 表单验证成功样式 */
+.form-group input.valid {
+    border-color: #28a745;
+}
+
+.form-group input.valid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* 响应式布局基础设置 */
+:root {
+    --max-width: 1200px;
+    --mobile-padding: 15px;
+    --tablet-padding: 20px;
+}
+
+/* 媒体查询断点 */
+@media (max-width: 768px) {
+
+    /* 导航栏移动端样式 */
+    nav {
+        flex-direction: column;
+        padding: var(--mobile-padding);
+    }
+
+    nav ul {
+        flex-direction: column;
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    nav ul li {
+        width: 100%;
+        text-align: center;
+    }
+
+    nav ul li a {
+        display: block;
+        padding: 12px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .auth-buttons {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .auth-buttons button {
+        flex: 1;
+        margin: 0;
+    }
+
+    /* 内容区域移动端样式 */
+    .content-container {
+        padding: var(--mobile-padding);
+    }
+
+    .analysis-grid,
+    .job-stats,
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* 简历页面移动端样式 */
+    .info-form .form-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .info-form label {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    /* 面试页面移动端样式 */
+    .interview-setup {
+        grid-template-columns: 1fr;
+    }
+
+    .difficulty-buttons {
+        flex-wrap: wrap;
+    }
+
+    .difficulty-btn {
+        flex: 1;
+        text-align: center;
+    }
+
+    /* 个人中心移动端样式 */
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* 平板设备样式 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .content-container {
+        padding: var(--tablet-padding);
+    }
+
+    .analysis-grid,
+    .job-stats,
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 响应式字体大小 */
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1.2rem;
+    }
+}
+
+/* 响应式图片 */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* 响应式表单 */
+@media (max-width: 768px) {
+    .auth-box {
+        width: 90%;
+        padding: 20px;
+        margin: 20px;
+    }
+
+    .form-group input,
+    .form-group select {
+        font-size: 16px;
+        /* 防止iOS缩放 */
+    }
+}
+
+/* 响应式聊天界面 */
+@media (max-width: 768px) {
+    .chat-messages {
+        height: 300px;
+    }
+
+    .chat-input {
+        flex-direction: column;
+    }
+
+    .chat-input input {
+        margin-bottom: 10px;
+    }
+
+    .chat-input button {
+        width: 100%;
+    }
+}
+
+/* 智能助手响应式位置 */
+@media (max-width: 768px) {
+    .ai-assistant {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+    }
+
+    .assistant-box {
+        text-align: center;
+        width: 100%;
+    }
+}
+
+/* 响应式动画效果 */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* 响应式打印样式 */
+@media print {
+    .no-print {
+        display: none;
+    }
+
+    .content-container {
+        padding: 0;
+        margin: 0;
+    }
+
+    body {
+        background: white;
+    }
+
+    .resume-section {
+        box-shadow: none;
+    }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+        color: #f5f5f5;
+    }
+
+    .auth-box,
+    .resume-card,
+    .analysis-card,
+    .stat-card,
+    .dashboard-card {
+        background-color: #2d2d2d;
+        color: #f5f5f5;
+    }
+
+    nav {
+        background-color: #2d2d2d;
+    }
+
+    nav ul li a {
+        color: #f5f5f5;
+    }
+
+    .form-group input,
+    .form-group select {
+        background-color: #3d3d3d;
+        color: #f5f5f5;
+        border-color: #4d4d4d;
+    }
+
+    .flash-message {
+        background-color: #3d3d3d;
+        border-color: #4d4d4d;
+    }
+}
+
+/* 可访问性优化 */
+@media (prefers-contrast: high) {
+    body {
+        --contrast-color: #000;
+        --contrast-background: #fff;
+    }
+
+    .auth-submit,
+    .login,
+    .register {
+        border: 2px solid var(--contrast-color);
+    }
+
+    .error-message {
+        color: #ff0000;
+    }
+}
+
+/* 简历编辑样式 */
+.resume-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.save-btn,
+.export-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.save-btn {
+    background-color: #00b38a;
+    color: white;
+}
+
+.export-btn {
+    background-color: #4a90e2;
+    color: white;
+}
+
+.education-item,
+.experience-item,
+.project-item {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.education-item input,
+.experience-item input,
+.project-item input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.experience-item textarea,
+.project-item textarea {
+    width: 100%;
+    height: 100px;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.remove-btn {
+    padding: 5px 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* 打印样式优化 */
+@media print {
+
+    .resume-actions,
+    .remove-btn,
+    .add-button {
+        display: none;
+    }
+
+    .resume-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    input,
+    textarea {
+        border: none !important;
+        padding: 0 !important;
+    }
+}
+
+/* 岗位卡片样式 */
+.position-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.position-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.position-card:hover {
+    transform: translateY(-5px);
+}
+
+.position-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.position-header h3 {
+    font-size: 18px;
+    color: #333;
+    margin: 0;
+}
+
+.salary {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.company-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.company-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.company-name {
+    color: #666;
+    font-size: 14px;
+}
+
+.position-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.tag {
+    background: #f5f5f5;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.position-requirements {
+    margin-bottom: 15px;
+}
+
+.position-requirements p {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.position-requirements i {
+    margin-right: 5px;
+    font-size: 16px;
+}
+
+.position-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.apply-btn,
+.save-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.apply-btn {
+    background: #00b38a;
+    color: white;
+    flex: 2;
+}
+
+.save-btn {
+    background: #f5f5f5;
+    color: #666;
+    flex: 1;
+}
+
+.apply-btn:hover {
+    background: #009a7b;
+}
+
+.save-btn:hover {
+    background: #e8e8e8;
+}

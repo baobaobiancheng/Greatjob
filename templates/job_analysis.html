@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}职位分析 - 求职平台{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <div class="job-analysis-section">
+        <h2>职位市场分析</h2>
+        <div class="job-search">
+            <input type="text" placeholder="搜索职位">
+            <button>搜索</button>
+        </div>
+        <div class="job-stats">
+            <div class="stat-card">
+                <h3>薪资分布</h3>
+                <div class="salary-chart">
+                    <!-- 薪资分布图表 -->
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3>技能需求</h3>
+                <div class="skills-chart">
+                    <!-- 技能需求图表 -->
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3>地区分布</h3>
+                <div class="location-chart">
+                    <!-- 地区分布图表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

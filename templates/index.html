@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="banner">
+    <h1>计算机就业上c职识（图片）</h1>
+</div>
+
+<div class="job-info">
+    <div class="info-row">
+        <span class="label">职位类型</span>
+        <span class="value">全职</span>
+        <span class="value">兼职</span>
+    </div>
+    <div class="info-row">
+        <span class="label">就业城市</span>
+        <span class="value">北京</span>
+        <span class="value">上海</span>
+        <span class="value">广州</span>
+        <span class="value">深圳</span>
+        <span class="value">武汉</span>
+        <span class="value">南京</span>
+        <span class="value">杭州</span>
+    </div>
+    <div class="info-row">
+        <span class="label">工作岗位</span>
+        <span class="value">算法工程师</span>
+    </div>
+    <div class="info-row">
+        <span class="label">智能职位推荐</span>
+    </div>
+</div>
+
+<div class="position-section">
+    <h2>热门岗位</h2>
+    <div class="position-grid">
+        {% for job in jobs %}
+        <div class="position-card">
+            <div class="position-header">
+                <h3>{{ job.title }}</h3>
+                <span class="salary">{{ job.salary }}</span>
+            </div>
+            <div class="company-info">
+                <img src="{{ job.company_logo }}" alt="{{ job.company_name }}" class="company-logo">
+                <span class="company-name">{{ job.company_name }}</span>
+            </div>
+            <div class="position-tags">
+                {% for tag in job.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            <div class="position-requirements">
+                <p><i class="icon-location"></i>{{ job.location }}</p>
+                <p><i class="icon-experience"></i>{{ job.experience }}</p>
+                <p><i class="icon-education"></i>{{ job.education }}</p>
+            </div>
+            <div class="position-actions">
+                <button class="apply-btn" onclick="applyJob('{{ job.id }}')">立即申请</button>
+                <button class="save-btn" onclick="saveJob('{{ job.id }}')">收藏</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="ai-assistant">
+    <div class="assistant-box">
+        智能问答助手
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function applyJob(jobId) {
+        {% if user %}
+        // 发送申请请求
+        fetch('/apply-job/' + jobId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('申请成功！');
+                } else {
+                    alert(data.message);
+                }
+            });
+        {% else %}
+        window.location.href = "{{ url_for('login') }}";
+        {% endif %}
+    }
+
+    function saveJob(jobId) {
+        {% if user %}
+        // 发送收藏请求
+        fetch('/save-job/' + jobId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('收藏成功！');
+                } else {
+                    alert(data.message);
+                }
+            });
+        {% else %}
+        window.location.href = "{{ url_for('login') }}";
+        {% endif %}
+    }
+</script>
+{% endblock %}
