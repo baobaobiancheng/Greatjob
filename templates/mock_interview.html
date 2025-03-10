@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}模拟面试 - 求职平台{% endblock %}
+
+{% block content %}
+<div class="interview-container">
+    <div class="interview-header">
+        <h2>模拟面试</h2>
+        <div class="interview-settings">
+            <select id="jobPosition" class="select-input">
+                <option value="">选择面试岗位</option>
+                <option value="frontend">前端开发</option>
+                <option value="backend">后端开发</option>
+                <option value="algorithm">算法工程师</option>
+                <option value="data">数据分析师</option>
+                <option value="product">产品经理</option>
+            </select>
+            <select id="difficulty" class="select-input">
+                <option value="easy">初级</option>
+                <option value="medium">中级</option>
+                <option value="hard">高级</option>
+            </select>
+        </div>
+        <div class="interview-type">
+            <button class="type-btn active" onclick="switchInterviewType('tech')">技术面试</button>
+            <button class="type-btn" onclick="switchInterviewType('hr')">HR面试</button>
+        </div>
+    </div>
+
+    <div class="interview-content">
+        <div id="tech-interview" class="interview-section active">
+            <div class="interview-description">
+                <h3>技术面试模拟</h3>
+                <p>根据选择的岗位和难度，AI将模拟技术面试官提出相关技术问题。</p>
+            </div>
+            <div class="chat-messages" id="techMessages"></div>
+            <div class="interview-actions">
+                <button id="startTechBtn" class="action-btn" onclick="startInterview('tech')">开始技术面试</button>
+                <button id="endTechBtn" class="action-btn end-btn" onclick="endInterview('tech')"
+                    style="display: none;">结束面试</button>
+            </div>
+        </div>
+
+        <div id="hr-interview" class="interview-section">
+            <div class="interview-description">
+                <h3>HR面试模拟</h3>
+                <p>模拟HR面试环节，包括个人背景、职业规划等常见问题。</p>
+            </div>
+            <div class="chat-messages" id="hrMessages"></div>
+            <div class="interview-actions">
+                <button id="startHrBtn" class="action-btn" onclick="startInterview('hr')">开始HR面试</button>
+                <button id="endHrBtn" class="action-btn end-btn" onclick="endInterview('hr')"
+                    style="display: none;">结束面试</button>
+            </div>
+        </div>
+
+        <div class="user-input-section" style="display: none;">
+            <textarea id="userInput" placeholder="输入你的回答..." rows="3"></textarea>
+            <button onclick="sendAnswer()" class="send-btn">发送</button>
+        </div>
+    </div>
+
+    <div id="interviewResult" class="result-section" style="display: none;">
+        <h3>面试评估结果</h3>
+        <div class="result-content"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentType = 'tech';
+    let isInterviewing = false;
+    let interviewHistory = [];
+
+    function switchInterviewType(type) {
+        if (isInterviewing) {
+            alert('请先结束当前面试');
+            return;
+        }
+
+        currentType = type;
+        document.querySelectorAll('.interview-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        document.getElementById(`${type}-interview`).classList.add('active');
+
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // 重置面试界面
+        document.querySelector('.user-input-section').style.display = 'none';
+        document.getElementById('interviewResult').style.display = 'none';
+        document.querySelector(`#${type}Messages`).innerHTML = '';
+    }
+
+    function startInterview(type) {
+        const position = document.getElementById('jobPosition').value;
+        const difficulty = document.getElementById('difficulty').value;
+
+        if (!position) {
+            alert('请选择面试岗位');
+            return;
+        }
+
+        isInterviewing = true;
+        interviewHistory = [];
+
+        // 显示加载状态
+        const startBtn = document.getElementById(`start${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
+        const originalText = startBtn.textContent;
+        startBtn.textContent = '准备中...';
+        startBtn.disabled = true;
+
+        fetch('/start-interview', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: type,
+                position: position,
+                difficulty: difficulty
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示输入区域，隐藏开始按钮，显示结束按钮
+                    document.querySelector('.user-input-section').style.display = 'flex';
+                    startBtn.style.display = 'none';
+                    document.getElementById(`end${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).style.display = 'inline-block';
+
+                    // 添加面试官的第一个问题
+                    addMessage(data.message, 'interviewer');
+
+                    // 记录到历史
+                    interviewHistory.push({
+                        role: 'assistant',
+                        content: data.message
+                    });
+                } else {
+                    throw new Error(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('开始面试失败：' + error.message);
+                isInterviewing = false;
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                startBtn.textContent = originalText;
+                startBtn.disabled = false;
+            });
+    }
+
+    function endInterview(type) {
+        if (confirm('确定要结束面试吗？')) {
+            isInterviewing = false;
+
+            // 发送结束面试请求，获取评估结果
+            fetch('/end-interview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: type,
+                    history: interviewHistory
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // 显示评估结果
+                    const resultSection = document.getElementById('interviewResult');
+                    resultSection.style.display = 'block';
+                    resultSection.querySelector('.result-content').innerHTML = data.evaluation;
+
+                    // 重置界面
+                    document.querySelector('.user-input-section').style.display = 'none';
+                    document.getElementById(`start${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).style.display = 'inline-block';
+                    document.getElementById(`end${type.charAt(0).toUpperCase() + type.slice(1)}Btn`).style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('获取评估结果失败，请重试');
+                });
+        }
+    }
+
+    function sendAnswer() {
+        const input = document.getElementById('userInput');
+        const answer = input.value.trim();
+
+        if (!answer) return;
+
+        addMessage(answer, 'user');
+        input.value = '';
+
+        // 记录答案
+        interviewHistory.push({
+            role: 'user',
+            content: answer
+        });
+
+        // 发送答案并获取下一个问题
+        fetch('/interview-next', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: currentType,
+                answer: answer,
+                history: interviewHistory
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                addMessage(data.message, 'interviewer');
+                interviewHistory.push({
+                    role: 'assistant',
+                    content: data.message
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessage('抱歉，出现了一些问题，请重试。', 'interviewer');
+            });
+    }
+
+    function addMessage(content, role) {
+        const messagesContainer = document.getElementById(`${currentType}Messages`);
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
+        messageDiv.innerHTML = `
+        <div class="message-content">
+            ${content}
+        </div>
+    `;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+</script>
+{% endblock %}

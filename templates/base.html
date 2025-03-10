@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}求职平台{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active" {% endif
+                        %}>求职推荐平台</a></li>
+                <li><a href="{{ url_for('competitive_analysis') }}" {% if request.endpoint=='competitive_analysis'
+                        %}class="active" {% endif %}>个人竞争力评估</a></li>
+                <li><a href="{{ url_for('job_analysis') }}" {% if request.endpoint=='job_analysis' %}class="active" {%
+                        endif %}>职位分析</a></li>
+                <li><a href="{{ url_for('resume') }}" {% if request.endpoint=='resume' %}class="active" {% endif
+                        %}>我的简历</a></li>
+                <li><a href="{{ url_for('mock_interview') }}" {% if request.endpoint=='mock_interview' %}class="active"
+                        {% endif %}>模拟面试</a></li>
+                <li><a href="{{ url_for('personal_center') }}" {% if request.endpoint=='personal_center'
+                        %}class="active" {% endif %}>个人中心</a></li>
+            </ul>
+            <div class="auth-buttons">
+                {% if user %}
+                <span class="username">{{ user }}</span>
+                <button class="logout" onclick="window.location.href='{{ url_for('logout') }}'">退出</button>
+                {% else %}
+                <button class="register" onclick="window.location.href='{{ url_for('register') }}'">注册</button>
+                <button class="login" onclick="window.location.href='{{ url_for('login') }}'">登录</button>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash-message">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

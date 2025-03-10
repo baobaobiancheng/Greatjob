@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}职位分析 - 求职平台{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <div class="analysis-header">
+        <h2>职位市场分析</h2>
+        <div class="filter-section">
+            <select id="jobCategory" onchange="updateCharts()">
+                <option value="all">全部岗位</option>
+                <option value="frontend">前端开发</option>
+                <option value="backend">后端开发</option>
+                <option value="algorithm">算法工程师</option>
+                <option value="data">数据分析师</option>
+                <option value="product">产品经理</option>
+            </select>
+            <select id="timeRange" onchange="updateCharts()">
+                <option value="7">近7天</option>
+                <option value="30">近30天</option>
+                <option value="90">近3个月</option>
+                <option value="180">近6个月</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="analysis-grid">
+        <!-- 薪资分布 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>薪资分布</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-10</span>
+                </div>
+            </div>
+            <div id="salaryChart" class="chart-container"></div>
+        </div>
+
+        <!-- 技能需求热度 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>技能需求热度</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-10</span>
+                </div>
+            </div>
+            <div id="skillsChart" class="chart-container"></div>
+        </div>
+
+        <!-- 城市分布 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>城市分布</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-10</span>
+                </div>
+            </div>
+            <div id="cityChart" class="chart-container"></div>
+        </div>
+
+        <!-- 企业福利词云 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>企业福利词云</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-10</span>
+                </div>
+            </div>
+            <div id="benefitsChart" class="chart-container"></div>
+        </div>
+
+        <!-- 学历要求分布 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>学历要求分布</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-10</span>
+                </div>
+            </div>
+            <div id="educationChart" class="chart-container"></div>
+        </div>
+
+        <!-- 工作经验要求 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>工作经验要求</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-10</span>
+                </div>
+            </div>
+            <div id="experienceChart" class="chart-container"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 初始化所有图表
+    let charts = {};
+
+    // 页面加载完成后初始化图表
+    document.addEventListener('DOMContentLoaded', function () {
+        initCharts();
+        updateCharts();
+    });
+
+    // 初始化图表对象
+    function initCharts() {
+        // 薪资分布图表
+        charts.salary = echarts.init(document.getElementById('salaryChart'));
+
+        // 技能需求热度图表
+        charts.skills = echarts.init(document.getElementById('skillsChart'));
+
+        // 城市分布图表
+        charts.city = echarts.init(document.getElementById('cityChart'));
+
+        // 企业福利词云图表
+        charts.benefits = echarts.init(document.getElementById('benefitsChart'));
+
+        // 学历要求分布图表
+        charts.education = echarts.init(document.getElementById('educationChart'));
+
+        // 工作经验要求图表
+        charts.experience = echarts.init(document.getElementById('experienceChart'));
+
+        // 监听窗口大小变化，调整图表大小
+        window.addEventListener('resize', function () {
+            Object.values(charts).forEach(chart => chart.resize());
+        });
+    }
+
+    // 更新所有图表
+    async function updateCharts() {
+        const category = document.getElementById('jobCategory').value;
+        const timeRange = document.getElementById('timeRange').value;
+
+        try {
+            // 获取薪资分布数据
+            const salaryResponse = await fetch(`/api/job-analysis/salary-distribution?category=${category}&time_range=${timeRange}`);
+            const salaryData = await salaryResponse.json();
+
+            if (salaryData.success) {
+                charts.salary.setOption({
+                    title: {
+                        text: '薪资分布',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: salaryData.data.ranges
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '职位数量'
+                    },
+                    series: [{
+                        data: salaryData.data.counts,
+                        type: 'bar',
+                        itemStyle: {
+                            color: '#00b38a'
+                        }
+                    }]
+                });
+            }
+
+            // 获取技能需求数据
+            const skillsResponse = await fetch(`/api/job-analysis/skill-requirements?category=${category}&time_range=${timeRange}`);
+            const skillsData = await skillsResponse.json();
+
+            if (skillsData.success) {
+                charts.skills.setOption({
+                    title: {
+                        text: '技能需求热度',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        data: skillsData.data,
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                });
+            }
+
+            // 更新城市分布图表
+            const cityResponse = await fetch(`/api/job-analysis/city-distribution?time_range=${timeRange}`);
+            const cityData = await cityResponse.json();
+
+            if (cityData.success) {
+                charts.city.setOption({
+                    title: {
+                        text: '城市分布',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: ['30%', '60%'],
+                        data: cityData.data,
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                });
+            }
+
+            // 更新企业福利词云图表
+            const benefitsResponse = await fetch(`/api/job-analysis/benefits-wordcloud?category=${category}&time_range=${timeRange}`);
+            const benefitsData = await benefitsResponse.json();
+
+            if (benefitsData.success) {
+                charts.benefits.setOption({
+                    title: {
+                        text: '企业福利词云',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        show: true
+                    },
+                    series: [{
+                        type: 'wordCloud',
+                        shape: 'circle',
+                        left: 'center',
+                        top: 'center',
+                        width: '90%',
+                        height: '90%',
+                        right: null,
+                        bottom: null,
+                        sizeRange: [12, 30],
+                        rotationRange: [-90, 90],
+                        rotationStep: 45,
+                        gridSize: 8,
+                        drawOutOfBound: false,
+                        textStyle: {
+                            fontFamily: 'sans-serif',
+                            fontWeight: 'bold',
+                            color: function () {
+                                return 'rgb(' + [
+                                    Math.round(Math.random() * 160),
+                                    Math.round(Math.random() * 160),
+                                    Math.round(Math.random() * 160)
+                                ].join(',') + ')';
+                            }
+                        },
+                        emphasis: {
+                            focus: 'self',
+                            textStyle: {
+                                shadowBlur: 10,
+                                shadowColor: '#333'
+                            }
+                        },
+                        data: benefitsData.data
+                    }]
+                });
+            }
+
+            // 更新学历要求分布图表
+            const educationResponse = await fetch(`/api/job-analysis/education-distribution?category=${category}&time_range=${timeRange}`);
+            const educationData = await educationResponse.json();
+
+            if (educationData.success) {
+                charts.education.setOption({
+                    title: {
+                        text: '学历要求分布',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: '50%',
+                        data: educationData.data,
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                });
+            }
+
+            // 更新工作经验要求图表
+            const experienceResponse = await fetch(`/api/job-analysis/experience-distribution?category=${category}&time_range=${timeRange}`);
+            const experienceData = await experienceResponse.json();
+
+            if (experienceData.success) {
+                charts.experience.setOption({
+                    title: {
+                        text: '工作经验要求',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: ['30%', '60%'],
+                        roseType: 'area',
+                        data: experienceData.data
+                    }]
+                });
+            }
+
+        } catch (error) {
+            console.error('获取数据失败:', error);
+            alert('获取数据失败，请稍后重试');
+        }
+    }
+</script>
+{% endblock %}
