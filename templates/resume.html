@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}我的简历 - 求职平台{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <div class="resume-section">
+        <div class="resume-header">
+            <h2>我的简历</h2>
+            <div class="resume-actions">
+                <button class="save-btn" onclick="saveResume()">保存</button>
+                <button class="export-btn" onclick="exportPDF()">导出PDF</button>
+            </div>
+        </div>
+
+        <div id="resume-content" class="resume-content">
+            <form id="resumeForm" method="POST" action="{{ url_for('save_resume') }}">
+                {{ form.csrf_token }}
+                <div class="resume-card">
+                    <h3>基本信息</h3>
+                    <div class="info-form">
+                        <div class="form-row">
+                            <label>姓名</label>
+                            {{ form.name(placeholder="请输入姓名") }}
+                            {% if form.name.errors %}
+                            {% for error in form.name.errors %}
+                            <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="form-row">
+                            <label>年龄</label>
+                            {{ form.age(placeholder="请输入年龄") }}
+                            {% if form.age.errors %}
+                            {% for error in form.age.errors %}
+                            <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="form-row">
+                            <label>学历</label>
+                            {{ form.education }}
+                            {% if form.education.errors %}
+                            {% for error in form.education.errors %}
+                            <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="resume-card">
+                    <h3>教育经历</h3>
+                    <div id="education-list" class="education-list">
+                        {% for edu in education_list %}
+                        <div class="education-item">
+                            <input type="text" name="school[]" value="{{ edu.school }}" placeholder="学校名称">
+                            <input type="text" name="major[]" value="{{ edu.major }}" placeholder="专业">
+                            <input type="text" name="degree[]" value="{{ edu.degree }}" placeholder="学位">
+                            <input type="text" name="edu_time[]" value="{{ edu.time }}" placeholder="起止时间">
+                            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="add-button" onclick="addEducation()">添加教育经历</button>
+                </div>
+
+                <div class="resume-card">
+                    <h3>工作/实习经历</h3>
+                    <div id="experience-list" class="experience-list">
+                        {% for exp in experience_list %}
+                        <div class="experience-item">
+                            <input type="text" name="company[]" value="{{ exp.company }}" placeholder="公司名称">
+                            <input type="text" name="position[]" value="{{ exp.position }}" placeholder="职位">
+                            <input type="text" name="exp_time[]" value="{{ exp.time }}" placeholder="起止时间">
+                            <textarea name="description[]" placeholder="工作描述">{{ exp.description }}</textarea>
+                            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="add-button" onclick="addExperience()">添加工作经历</button>
+                </div>
+
+                <div class="resume-card">
+                    <h3>项目经历</h3>
+                    <div id="project-list" class="project-list">
+                        {% for proj in project_list %}
+                        <div class="project-item">
+                            <input type="text" name="project_name[]" value="{{ proj.name }}" placeholder="项目名称">
+                            <input type="text" name="project_role[]" value="{{ proj.role }}" placeholder="担任角色">
+                            <input type="text" name="project_time[]" value="{{ proj.time }}" placeholder="起止时间">
+                            <textarea name="project_description[]" placeholder="项目描述">{{ proj.description }}</textarea>
+                            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="add-button" onclick="addProject()">添加项目经历</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 添加教育经历
+    function addEducation() {
+        const list = document.getElementById('education-list');
+        const item = document.createElement('div');
+        item.className = 'education-item';
+        item.innerHTML = `
+            <input type="text" name="school[]" placeholder="学校名称">
+            <input type="text" name="major[]" placeholder="专业">
+            <input type="text" name="degree[]" placeholder="学位">
+            <input type="text" name="edu_time[]" placeholder="起止时间">
+            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+        `;
+        list.appendChild(item);
+    }
+
+    // 添加工作经历
+    function addExperience() {
+        const list = document.getElementById('experience-list');
+        const item = document.createElement('div');
+        item.className = 'experience-item';
+        item.innerHTML = `
+            <input type="text" name="company[]" placeholder="公司名称">
+            <input type="text" name="position[]" placeholder="职位">
+            <input type="text" name="exp_time[]" placeholder="起止时间">
+            <textarea name="description[]" placeholder="工作描述"></textarea>
+            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+        `;
+        list.appendChild(item);
+    }
+
+    // 添加项目经历
+    function addProject() {
+        const list = document.getElementById('project-list');
+        const item = document.createElement('div');
+        item.className = 'project-item';
+        item.innerHTML = `
+            <input type="text" name="project_name[]" placeholder="项目名称">
+            <input type="text" name="project_role[]" placeholder="担任角色">
+            <input type="text" name="project_time[]" placeholder="起止时间">
+            <textarea name="project_description[]" placeholder="项目描述"></textarea>
+            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+        `;
+        list.appendChild(item);
+    }
+
+    // 删除条目
+    function removeItem(button) {
+        button.parentElement.remove();
+    }
+
+    // 保存简历
+    function saveResume() {
+        document.getElementById('resumeForm').submit();
+    }
+
+    // 导出PDF
+    function exportPDF() {
+        const element = document.getElementById('resume-content');
+        const buttons = element.querySelectorAll('.remove-btn, .add-button');
+
+        // 临时隐藏按钮
+        buttons.forEach(btn => btn.style.display = 'none');
+
+        const opt = {
+            margin: 1,
+            filename: '我的简历.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            // 恢复按钮显示
+            buttons.forEach(btn => btn.style.display = 'block');
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}个人中心 - 求职平台{% endblock %}
+
+{% block content %}
+<div class="personal-container">
+    <div class="profile-section">
+        <div class="profile-left">
+            <div class="avatar-container">
+                <img id="avatarImg" src="{{ avatar_url or url_for('static', filename='个人头像.png') }}" alt="用户头像"
+                    class="avatar">
+                <div class="avatar-upload">
+                    <label for="avatarInput" class="upload-btn">更换头像</label>
+                    <input type="file" id="avatarInput" accept="image/*" onchange="uploadAvatar()"
+                        style="display: none;">
+                </div>
+            </div>
+            <div class="user-info">
+                <h2>{{ user }}</h2>
+                <p class="email">{{ email }}</p>
+            </div>
+        </div>
+        <div class="profile-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ saved_jobs|length }}</span>
+                <span class="stat-label">收藏职位</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ applied_jobs|default(0) }}</span>
+                <span class="stat-label">已投递</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ interview_count|default(0) }}</span>
+                <span class="stat-label">面试次数</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section">
+        <div class="tabs-section">
+            <div class="tab-header">
+                <button class="tab-btn active" onclick="switchTab('settings')">账号设置</button>
+                <button class="tab-btn" onclick="switchTab('job_intention')">求职意向</button>
+                <button class="tab-btn" onclick="switchTab('favorites')">我的收藏</button>
+                <button class="tab-btn" onclick="switchTab('applications')">投递记录</button>
+            </div>
+
+            <div id="settings" class="tab-content active">
+                <div class="settings-section">
+                    <h3>修改密码</h3>
+                    <form method="POST" action="{{ url_for('change_password') }}" class="password-form">
+                        {{ password_form.csrf_token }}
+                        <div class="form-group">
+                            {{ password_form.current_password.label }}
+                            {{ password_form.current_password(class="form-control") }}
+                        </div>
+                        <div class="form-group">
+                            {{ password_form.new_password.label }}
+                            {{ password_form.new_password(class="form-control") }}
+                        </div>
+                        <div class="form-group">
+                            {{ password_form.confirm_password.label }}
+                            {{ password_form.confirm_password(class="form-control") }}
+                        </div>
+                        <button type="submit" class="submit-btn">修改密码</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="job_intention" class="tab-content">
+                <div class="job-intention-section">
+                    <h3>求职意向设置</h3>
+                    <form id="jobIntentionForm" class="intention-form">
+                        <div class="form-group">
+                            <label>期望职位</label>
+                            <input type="text" class="form-control" name="desired_position"
+                                value="{{ job_intention.desired_position or '' }}" placeholder="例如：前端开发工程师">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="desired_city">期望城市</label>
+                            <select name="desired_city" id="desired_city" class="form-control">
+                                {% for city in cities %}
+                                <option value="{{ city }}" {% if job_intention.desired_city==city %}selected{% endif %}>
+                                    {{ city }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>期望薪资</label>
+                            <div class="salary-range">
+                                <input type="number" class="form-control" name="salary_min"
+                                    value="{{ job_intention.salary_min or '' }}" placeholder="最低薪资">
+                                <span class="salary-separator">-</span>
+                                <input type="number" class="form-control" name="salary_max"
+                                    value="{{ job_intention.salary_max or '' }}" placeholder="最高薪资">
+                                <span class="salary-unit">K/月</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>工作类型</label>
+                            <div class="job-type-options">
+                                <label class="radio-option">
+                                    <input type="radio" name="job_type" value="全职" {% if job_intention.job_type=='全职'
+                                        %}checked{% endif %}>
+                                    <span>全职</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="job_type" value="兼职" {% if job_intention.job_type=='兼职'
+                                        %}checked{% endif %}>
+                                    <span>兼职</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="job_type" value="实习" {% if job_intention.job_type=='实习'
+                                        %}checked{% endif %}>
+                                    <span>实习</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>到岗时间</label>
+                            <select class="form-control" name="available_time">
+                                <option value="随时" {% if job_intention.available_time=='随时' %}selected{% endif %}>随时到岗
+                                </option>
+                                <option value="一周内" {% if job_intention.available_time=='一周内' %}selected{% endif %}>一周内
+                                </option>
+                                <option value="两周内" {% if job_intention.available_time=='两周内' %}selected{% endif %}>两周内
+                                </option>
+                                <option value="一个月内" {% if job_intention.available_time=='一个月内' %}selected{% endif %}>
+                                    一个月内</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="submit-btn">保存设置</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="favorites" class="tab-content">
+                <div class="favorites-section">
+                    <h3>收藏的职位</h3>
+                    <div class="favorites-grid">
+                        {% for job in saved_jobs %}
+                        <div class="job-card" data-job-id="{{ job.id }}">
+                            <div class="job-info">
+                                <h4>{{ job.title }}</h4>
+                                <p class="company">{{ job.company_name }}</p>
+                                <p class="salary">{{ job.salary }}</p>
+                            </div>
+                            <div class="job-actions">
+                                <button class="apply-btn">申请职位</button>
+                                <button class="unsave-btn" onclick="unsaveJob({{ job.id }}, this)">取消收藏</button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="no-data">
+                            <i class="fas fa-bookmark"></i>
+                            <p>暂无收藏的职位</p>
+                            <a href="{{ url_for('index') }}" class="browse-btn">浏览职位</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div id="applications" class="tab-content">
+                <div class="applications-section">
+                    <h3>投递记录</h3>
+                    <div class="applications-list">
+                        {% if applied_jobs %}
+                        {% for job in applied_jobs %}
+                        <div class="application-item">
+                            <div class="job-basic-info">
+                                <h4>{{ job.title }}</h4>
+                                <span class="company-name">{{ job.company_name }}</span>
+                            </div>
+                            <div class="application-status {{ job.status }}">
+                                {{ job.status_text }}
+                            </div>
+                            <div class="application-time">
+                                投递时间：{{ job.apply_time }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="no-data">
+                            <i class="fas fa-paper-plane"></i>
+                            <p>暂无投递记录</p>
+                            <a href="{{ url_for('index') }}" class="browse-btn">浏览职位</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchTab(tabId) {
+        // 获取所有标签页内容和按钮
+        const tabContents = document.querySelectorAll('.tab-content');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+
+        // 移除所有活动状态
+        tabContents.forEach(tab => {
+            tab.classList.remove('active');
+            // 重置动画
+            tab.style.animation = 'none';
+            tab.offsetHeight; // 触发重排
+            tab.style.animation = null;
+        });
+
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // 激活选中的标签页
+        const selectedTab = document.getElementById(tabId);
+        const selectedBtn = event.target;
+
+        selectedTab.classList.add('active');
+        selectedBtn.classList.add('active');
+
+        // 根据不同标签页应用不同动画
+        switch (tabId) {
+            case 'settings':
+                selectedTab.style.animation = 'slideIn 0.3s ease forwards';
+                break;
+            case 'favorites':
+                selectedTab.style.animation = 'fadeIn 0.3s ease forwards';
+                break;
+            case 'applications':
+                selectedTab.style.animation = 'slideUp 0.3s ease forwards';
+                break;
+        }
+    }
+
+    // 页面加载时初始化第一个标签页
+    document.addEventListener('DOMContentLoaded', function () {
+        const firstTab = document.querySelector('.tab-btn');
+        if (firstTab) {
+            firstTab.click();
+        }
+    });
+
+    function unsaveJob(jobId, btn) {
+        if (!confirm('确定要取消收藏该职位吗？')) {
+            return;
+        }
+
+        fetch(`/unsave-job/${jobId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 移除整个职位卡片
+                    const jobCard = btn.closest('.job-card');
+                    jobCard.remove();
+
+                    // 如果没有收藏的职位了，显示提示信息
+                    const jobsList = document.querySelector('.favorites-grid');
+                    if (jobsList.children.length === 0) {
+                        jobsList.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-bookmark"></i>
+                        <p>暂无收藏的职位</p>
+                        <a href="{{ url_for('index') }}" class="browse-btn">浏览职位</a>
+                    </div>
+                `;
+                    }
+                } else {
+                    alert(data.message || '取消收藏失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('取消收藏失败，请重试');
+            });
+    }
+
+    function uploadAvatar() {
+        const input = document.getElementById('avatarInput');
+        const file = input.files[0];
+        if (!file) return;
+
+        // 检查文件大小
+        if (file.size > 16 * 1024 * 1024) {
+            alert('文件大小不能超过16MB');
+            return;
+        }
+
+        // 检查文件类型
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('只支持JPG、PNG、GIF格式的图片');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        // 显示上传中的状态
+        const uploadBtn = document.querySelector('.upload-btn');
+        const originalText = uploadBtn.textContent;
+        uploadBtn.textContent = '上传中...';
+        uploadBtn.disabled = true;
+
+        fetch('/upload-avatar', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('avatarImg').src = data.avatar_url;
+                    alert('头像上传成功！');
+                } else {
+                    alert(data.message || '上传失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                alert('上传失败，请检查网络连接后重试');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                uploadBtn.textContent = originalText;
+                uploadBtn.disabled = false;
+            });
+    }
+
+    function saveJobIntention(event) {
+        event.preventDefault();
+
+        const form = document.getElementById('jobIntentionForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // 添加基本验证
+        if (!data.desired_position) {
+            alert('请填写期望职位');
+            return;
+        }
+
+        // 显示保存中状态
+        const submitBtn = form.querySelector('.submit-btn');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '保存中...';
+        submitBtn.disabled = true;
+
+        fetch('/save-job-intention', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('求职意向保存成功！');
+                } else {
+                    alert(data.message || '保存失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('保存失败：' + (error.message || '请重试'));
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+    }
+
+    // 确保表单存在后再添加事件监听
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('jobIntentionForm');
+        if (form) {
+            form.addEventListener('submit', saveJobIntention);
+        }
+    });
+</script>
+{% endblock %}
