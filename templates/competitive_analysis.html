@@ -2,32 +2,165 @@
 
 {% block title %}个人竞争力评估 - 求职平台{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="content-container">
-    <div class="analysis-section">
-        <h2>个人竞争力分析</h2>
-        <div class="analysis-grid">
-            <div class="analysis-card">
-                <h3>技能评估</h3>
-                <div class="skill-chart">
-                    <!-- 这里可以添加图表 -->
+    <div class="analysis-header">
+        <h2>个人竞争力评估</h2>
+    </div>
+
+    <div class="analysis-grid">
+        <!-- 竞争力雷达图 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>竞争力雷达图</h3>
+                <div class="card-tools">
+                    <span class="data-update">最近更新：2024-03-15</span>
                 </div>
             </div>
-            <div class="analysis-card">
-                <h3>市场竞争力</h3>
-                <div class="market-analysis">
-                    <!-- 市场分析内容 -->
-                </div>
+            <div id="radarChart" class="chart-container"></div>
+        </div>
+
+        <!-- 竞争力总结 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>竞争力总结</h3>
             </div>
-            <div class="analysis-card">
-                <h3>发展建议</h3>
-                <ul class="suggestions">
-                    <li>建议1</li>
-                    <li>建议2</li>
-                    <li>建议3</li>
+            <div class="competitive-summary">
+                <p>根据您的简历和求职意向分析，您在<strong>技术能力</strong>方面表现突出，特别是在编程语言和算法方面具有较强的竞争力。</p>
+                <p>您的<strong>项目经验</strong>丰富，能够很好地展示您的实践能力和解决问题的能力。</p>
+                <p>在<strong>学历背景</strong>方面，您的教育背景符合大多数企业的要求，为您的求职提供了良好的基础。</p>
+                <p>建议您可以进一步提升<strong>行业经验</strong>和<strong>软技能</strong>，这将使您在竞争激烈的就业市场中脱颖而出。</p>
+                <p>总体来说，您的竞争力评分为<strong>85分</strong>，处于较高水平，在目标岗位上具有较强的竞争优势。</p>
+            </div>
+        </div>
+
+        <!-- 技能匹配度 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>技能匹配度</h3>
+            </div>
+            <div id="skillMatchChart" class="chart-container"></div>
+        </div>
+
+        <!-- 改进建议 -->
+        <div class="analysis-card">
+            <div class="card-header">
+                <h3>改进建议</h3>
+            </div>
+            <div class="improvement-suggestions">
+                <ul>
+                    <li><strong>技术能力</strong>：继续深入学习前沿技术，参与开源项目，提升技术深度。</li>
+                    <li><strong>项目经验</strong>：尝试参与更多跨团队协作的项目，增加项目的复杂度和影响力。</li>
+                    <li><strong>软技能</strong>：提升沟通能力和团队协作能力，这在面试和工作中都非常重要。</li>
+                    <li><strong>行业知识</strong>：关注行业动态，了解目标公司的业务模式和技术栈。</li>
+                    <li><strong>简历优化</strong>：突出您的核心竞争力，使用数据和成果来量化您的贡献。</li>
                 </ul>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 初始化雷达图
+        const radarChart = echarts.init(document.getElementById('radarChart'));
+
+        // 雷达图配置
+        const radarOption = {
+            tooltip: {
+                trigger: 'item'
+            },
+            radar: {
+                indicator: [
+                    { name: '技术能力', max: 100 },
+                    { name: '项目经验', max: 100 },
+                    { name: '学历背景', max: 100 },
+                    { name: '行业经验', max: 100 },
+                    { name: '软技能', max: 100 }
+                ],
+                radius: '65%'
+            },
+            series: [{
+                type: 'radar',
+                data: [{
+                    value: [90, 85, 80, 70, 75],
+                    name: '个人竞争力',
+                    areaStyle: {
+                        color: 'rgba(0, 179, 138, 0.4)'
+                    },
+                    lineStyle: {
+                        color: '#00b38a'
+                    },
+                    itemStyle: {
+                        color: '#00b38a'
+                    }
+                }]
+            }]
+        };
+
+        // 设置雷达图
+        radarChart.setOption(radarOption);
+
+        // 初始化技能匹配度图表
+        const skillMatchChart = echarts.init(document.getElementById('skillMatchChart'));
+
+        // 技能匹配度图表配置
+        const skillMatchOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                max: 100,
+                axisLabel: {
+                    formatter: '{value}%'
+                }
+            },
+            yAxis: {
+                type: 'category',
+                data: ['Python', 'JavaScript', 'SQL', 'React', 'Machine Learning']
+            },
+            series: [{
+                name: '匹配度',
+                type: 'bar',
+                data: [95, 85, 90, 75, 80],
+                itemStyle: {
+                    color: function (params) {
+                        const colorList = ['#00b38a', '#5470c6', '#91cc75', '#fac858', '#ee6666'];
+                        return colorList[params.dataIndex % colorList.length];
+                    }
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    formatter: '{c}%'
+                }
+            }]
+        };
+
+        // 设置技能匹配度图表
+        skillMatchChart.setOption(skillMatchOption);
+
+        // 监听窗口大小变化，调整图表大小
+        window.addEventListener('resize', function () {
+            radarChart.resize();
+            skillMatchChart.resize();
+        });
+    });
+</script>
 {% endblock %}

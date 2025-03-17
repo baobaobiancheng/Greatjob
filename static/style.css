@@ -29,10 +29,12 @@ nav ul {
 }
 
 nav ul li a {
-    text-decoration: none;
     color: #333;
-    padding: 10px 20px;
-    font-size: 14px;
+    text-decoration: none;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    transition: color 0.3s ease;
 }
 
 nav ul li a.active {
@@ -1721,24 +1723,38 @@ img {
 }
 
 .application-status {
-    padding: 5px 12px;
-    border-radius: 15px;
+    padding: 6px 15px;
+    border-radius: 20px;
     font-size: 14px;
+    font-weight: 500;
+    margin: 0 20px;
+    text-align: center;
+    min-width: 80px;
 }
 
-.application-status.pending {
-    background-color: #fff7e6;
-    color: #ffa940;
+.application-status.待处理 {
+    background-color: #e6f7ff;
+    color: #1890ff;
 }
 
-.application-status.accepted {
+.application-status.已查看 {
     background-color: #f6ffed;
     color: #52c41a;
 }
 
-.application-status.rejected {
+.application-status.面试中 {
+    background-color: #fff7e6;
+    color: #fa8c16;
+}
+
+.application-status.已通过 {
+    background-color: #d9f7be;
+    color: #389e0d;
+}
+
+.application-status.未通过 {
     background-color: #fff1f0;
-    color: #ff4d4f;
+    color: #f5222d;
 }
 
 .application-time {
@@ -2117,6 +2133,33 @@ img {
     font-size: 14px;
     font-weight: 500;
     margin: 0 20px;
+    text-align: center;
+    min-width: 80px;
+}
+
+.application-status.待处理 {
+    background-color: #e6f7ff;
+    color: #1890ff;
+}
+
+.application-status.已查看 {
+    background-color: #f6ffed;
+    color: #52c41a;
+}
+
+.application-status.面试中 {
+    background-color: #fff7e6;
+    color: #fa8c16;
+}
+
+.application-status.已通过 {
+    background-color: #d9f7be;
+    color: #389e0d;
+}
+
+.application-status.未通过 {
+    background-color: #fff1f0;
+    color: #f5222d;
 }
 
 .application-time {
@@ -2420,4 +2463,511 @@ img {
     .chart-container {
         height: 250px;
     }
+}
+
+.nav-logo {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.nav-search {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    margin-right: 20px;
+}
+
+.nav-search form {
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+    width: 200px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.search-input:focus {
+    border-color: #00b38a;
+}
+
+.search-btn {
+    background-color: #00b38a;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.search-btn:hover {
+    background-color: #009975;
+}
+
+@media (max-width: 1024px) {
+    .nav-search {
+        margin-right: 10px;
+    }
+
+    .search-input {
+        width: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-search {
+        order: 3;
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .nav-search form {
+        width: 100%;
+    }
+
+    .search-input {
+        width: calc(100% - 80px);
+    }
+}
+
+.competitive-summary {
+    padding: 15px;
+    line-height: 1.6;
+    color: #333;
+}
+
+.competitive-summary p {
+    margin-bottom: 15px;
+}
+
+.competitive-summary strong {
+    color: #00b38a;
+    font-weight: 600;
+}
+
+.improvement-suggestions {
+    padding: 15px;
+}
+
+.improvement-suggestions ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.improvement-suggestions li {
+    margin-bottom: 15px;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.5;
+}
+
+.improvement-suggestions li:before {
+    content: "•";
+    color: #00b38a;
+    font-size: 20px;
+    position: absolute;
+    left: 0;
+    top: -2px;
+}
+
+.improvement-suggestions strong {
+    color: #00b38a;
+    font-weight: 600;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+
+    .competitive-summary,
+    .improvement-suggestions {
+        padding: 10px;
+    }
+
+    .improvement-suggestions li {
+        padding-left: 15px;
+    }
+}
+
+/* 岗位详情页样式 */
+.job-detail-container {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.job-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+
+.job-basic-info {
+    flex: 1;
+}
+
+.job-title {
+    font-size: 28px;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.job-salary {
+    font-size: 22px;
+    color: #00b38a;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.job-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.job-tags .tag {
+    padding: 5px 12px;
+    background-color: #f5f5f5;
+    color: #666;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.company-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 30px;
+}
+
+.company-info .company-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.company-info .company-name {
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+}
+
+.job-detail-content {
+    display: flex;
+    gap: 20px;
+}
+
+.job-main-content {
+    flex: 1;
+}
+
+.job-sidebar {
+    width: 300px;
+}
+
+.job-section {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.job-requirements {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.requirement-item {
+    display: flex;
+    align-items: center;
+}
+
+.requirement-item i {
+    margin-right: 10px;
+    color: #00b38a;
+}
+
+.job-description,
+.job-responsibilities,
+.job-qualifications,
+.job-benefits {
+    line-height: 1.8;
+    color: #666;
+}
+
+.job-description p,
+.job-responsibilities p,
+.job-qualifications p,
+.job-benefits p {
+    margin-bottom: 15px;
+}
+
+.job-description ul,
+.job-responsibilities ul,
+.job-qualifications ul,
+.job-benefits ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.job-description li,
+.job-responsibilities li,
+.job-qualifications li,
+.job-benefits li {
+    margin-bottom: 8px;
+}
+
+.action-buttons {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.action-buttons .apply-btn,
+.action-buttons .save-btn {
+    padding: 12px 0;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.action-buttons .apply-btn {
+    background-color: #00b38a;
+    color: white;
+}
+
+.action-buttons .apply-btn:hover {
+    background-color: #009a7b;
+    transform: translateY(-2px);
+}
+
+.action-buttons .save-btn {
+    background-color: #f5f5f5;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.action-buttons .save-btn:hover {
+    background-color: #e8e8e8;
+    transform: translateY(-2px);
+}
+
+.company-card,
+.similar-jobs {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.company-card h3,
+.similar-jobs h3 {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.company-detail p {
+    margin-bottom: 10px;
+    color: #666;
+    font-size: 14px;
+}
+
+.similar-jobs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.similar-job-item {
+    padding: 15px;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+    transition: all 0.3s ease;
+}
+
+.similar-job-item:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+.similar-job-item a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.similar-job-title {
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.similar-job-company {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.similar-job-salary {
+    font-size: 14px;
+    color: #00b38a;
+    font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 992px) {
+    .job-detail-content {
+        flex-direction: column;
+    }
+
+    .job-sidebar {
+        width: 100%;
+    }
+
+    .job-requirements {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .job-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .company-info {
+        margin-left: 0;
+        margin-top: 20px;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .company-info .company-logo {
+        margin-bottom: 0;
+        margin-right: 15px;
+    }
+}
+
+/* 首页职位卡片链接样式 */
+.position-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.position-card {
+    transition: transform 0.3s ease;
+}
+
+.position-card:hover {
+    transform: translateY(-5px);
+}
+
+.count-badge {
+    display: inline-block;
+    background-color: #00b38a;
+    color: white;
+    font-size: 14px;
+    font-weight: normal;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* 标签页数量徽章 */
+.tab-badge {
+    display: inline-block;
+    background-color: #00b38a;
+    color: white;
+    font-size: 12px;
+    font-weight: normal;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+/* 推荐类型提示样式 */
+.recommend-type {
+    width: 100%;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border-left: 4px solid #00b38a;
+    font-size: 14px;
+    color: #333;
+}
+
+.recommend-type span {
+    font-weight: 500;
+}
+
+/* 推荐原因样式 */
+.recommend-reason {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #666;
+    font-style: italic;
+}
+
+/* 推荐数据统计样式 */
+.recommend-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #ddd;
+}
+
+.recommend-stats .stat-item {
+    font-size: 12px;
+    color: #666;
+}
+
+.recommend-stats .stat-item span {
+    font-weight: bold;
+    color: #00b38a;
 }

@@ -22,12 +22,12 @@
         </div>
         <div class="profile-stats">
             <div class="stat-item">
-                <span class="stat-number">{{ saved_jobs|length }}</span>
-                <span class="stat-label">收藏职位</span>
+                <div class="stat-number">{{ saved_jobs|length }}</div>
+                <div class="stat-label">收藏职位</div>
             </div>
             <div class="stat-item">
-                <span class="stat-number">{{ applied_jobs|default(0) }}</span>
-                <span class="stat-label">已投递</span>
+                <div class="stat-number">{{ applied_jobs|length }}</div>
+                <div class="stat-label">已投递</div>
             </div>
             <div class="stat-item">
                 <span class="stat-number">{{ interview_count|default(0) }}</span>
@@ -39,10 +39,12 @@
     <div class="content-section">
         <div class="tabs-section">
             <div class="tab-header">
-                <button class="tab-btn active" onclick="switchTab('settings')">账号设置</button>
+                <button class="tab-btn active" onclick="switchTab('settings')">个人设置</button>
                 <button class="tab-btn" onclick="switchTab('job_intention')">求职意向</button>
-                <button class="tab-btn" onclick="switchTab('favorites')">我的收藏</button>
-                <button class="tab-btn" onclick="switchTab('applications')">投递记录</button>
+                <button class="tab-btn" onclick="switchTab('favorites')">我的收藏 <span class="tab-badge">{{
+                        saved_jobs|length }}</span></button>
+                <button class="tab-btn" onclick="switchTab('applications')">投递记录 <span class="tab-badge">{{
+                        applied_jobs|length }}</span></button>
             </div>
 
             <div id="settings" class="tab-content active">
@@ -142,7 +144,7 @@
 
             <div id="favorites" class="tab-content">
                 <div class="favorites-section">
-                    <h3>收藏的职位</h3>
+                    <h3>收藏的职位 <span class="count-badge">{{ saved_jobs|length }}</span></h3>
                     <div class="favorites-grid">
                         {% for job in saved_jobs %}
                         <div class="job-card" data-job-id="{{ job.id }}">
@@ -169,7 +171,7 @@
 
             <div id="applications" class="tab-content">
                 <div class="applications-section">
-                    <h3>投递记录</h3>
+                    <h3>投递记录 <span class="count-badge">{{ applied_jobs|length }}</span></h3>
                     <div class="applications-list">
                         {% if applied_jobs %}
                         {% for job in applied_jobs %}
@@ -179,7 +181,19 @@
                                 <span class="company-name">{{ job.company_name }}</span>
                             </div>
                             <div class="application-status {{ job.status }}">
-                                {{ job.status_text }}
+                                {% if job.status == '待处理' %}
+                                待处理
+                                {% elif job.status == '已查看' %}
+                                已查看
+                                {% elif job.status == '面试中' %}
+                                面试中
+                                {% elif job.status == '已通过' %}
+                                已通过
+                                {% elif job.status == '未通过' %}
+                                未通过
+                                {% else %}
+                                {{ job.status }}
+                                {% endif %}
                             </div>
                             <div class="application-time">
                                 投递时间：{{ job.apply_time }}

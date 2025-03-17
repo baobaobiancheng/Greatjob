@@ -1,106 +1,489 @@
 {% extends "base.html" %}
 
-{% block title %}我的简历 - 求职平台{% endblock %}
+{% block title %}在线简历编辑器 - 求职平台{% endblock %}
 
 {% block extra_head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+    .resume-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        max-width: 1600px;
+        margin: 30px auto;
+        padding: 0 20px;
+    }
+
+    .editor-section {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 25px;
+    }
+
+    .preview-section {
+        position: sticky;
+        top: 20px;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 25px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+    }
+
+    .resume-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #00b38a;
+    }
+
+    .resume-header h2 {
+        color: #333;
+        font-size: 24px;
+        margin: 0;
+    }
+
+    .resume-actions {
+        display: flex;
+        gap: 15px;
+    }
+
+    .resume-actions button {
+        padding: 10px 25px;
+        border: none;
+        border-radius: 5px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .save-btn {
+        background-color: #00b38a;
+        color: white;
+    }
+
+    .save-btn:hover {
+        background-color: #009a76;
+    }
+
+    .export-btn {
+        background-color: #f5f5f5;
+        color: #333;
+        border: 1px solid #ddd !important;
+    }
+
+    .export-btn:hover {
+        background-color: #e8e8e8;
+    }
+
+    .resume-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .resume-card h3 {
+        color: #333;
+        font-size: 18px;
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .resume-card h3 i {
+        color: #00b38a;
+    }
+
+    .info-form .form-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .info-form label {
+        color: #666;
+        font-size: 15px;
+    }
+
+    .info-form input,
+    .info-form select,
+    .info-form textarea {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .info-form input:focus,
+    .info-form select:focus,
+    .info-form textarea:focus {
+        border-color: #00b38a;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 179, 138, 0.1);
+    }
+
+    .education-item,
+    .experience-item,
+    .project-item,
+    .skill-item {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .education-item:hover,
+    .experience-item:hover,
+    .project-item:hover,
+    .skill-item:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .item-title {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .item-time {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .item-content {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .remove-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #ff4d4f;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .education-item:hover .remove-btn,
+    .experience-item:hover .remove-btn,
+    .project-item:hover .remove-btn,
+    .skill-item:hover .remove-btn {
+        opacity: 1;
+    }
+
+    .add-button {
+        width: 100%;
+        padding: 12px;
+        background: #f0f9f6;
+        color: #00b38a;
+        border: 1px dashed #00b38a;
+        border-radius: 8px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .add-button:hover {
+        background: #e0f4ef;
+    }
+
+    .error-message {
+        color: #ff4d4f;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+
+    .message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 5px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        transition: all 0.3s ease;
+    }
+
+    .message.success {
+        background: #f6ffed;
+        border: 1px solid #b7eb8f;
+        color: #52c41a;
+    }
+
+    .message.error {
+        background: #fff2f0;
+        border: 1px solid #ffccc7;
+        color: #ff4d4f;
+    }
+
+    .preview-section {
+        font-family: 'Arial', sans-serif;
+    }
+
+    .preview-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .preview-name {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .preview-contact {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .preview-section h4 {
+        color: #00b38a;
+        border-bottom: 2px solid #00b38a;
+        padding-bottom: 8px;
+        margin: 20px 0 15px;
+    }
+
+    .preview-item {
+        margin-bottom: 20px;
+    }
+
+    .preview-item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .preview-item-title {
+        font-weight: bold;
+    }
+
+    .preview-item-time {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .preview-item-content {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .skill-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .skill-tag {
+        background: #f0f9f6;
+        color: #00b38a;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 13px;
+    }
+
+    @media (max-width: 1200px) {
+        .resume-container {
+            grid-template-columns: 1fr;
+        }
+
+        .preview-section {
+            position: relative;
+            top: 0;
+        }
+    }
+
+    @media print {
+
+        .editor-section,
+        .resume-actions,
+        .remove-btn,
+        .add-button {
+            display: none;
+        }
+
+        .resume-container {
+            grid-template-columns: 1fr;
+            padding: 0;
+            margin: 0;
+        }
+
+        .preview-section {
+            box-shadow: none;
+            padding: 0;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="content-container">
-    <div class="resume-section">
+<div class="resume-container">
+    <div class="editor-section">
         <div class="resume-header">
-            <h2>我的简历</h2>
+            <h2>在线简历编辑器</h2>
             <div class="resume-actions">
-                <button class="save-btn" onclick="saveResume()">保存</button>
-                <button class="export-btn" onclick="exportPDF()">导出PDF</button>
+                <button class="save-btn" onclick="saveResume()">
+                    <i class="fas fa-save"></i> 保存简历
+                </button>
+                <button class="export-btn" onclick="exportPDF()">
+                    <i class="fas fa-file-pdf"></i> 导出PDF
+                </button>
             </div>
         </div>
 
-        <div id="resume-content" class="resume-content">
-            <form id="resumeForm" method="POST" action="{{ url_for('save_resume') }}">
-                {{ form.csrf_token }}
-                <div class="resume-card">
-                    <h3>基本信息</h3>
-                    <div class="info-form">
-                        <div class="form-row">
-                            <label>姓名</label>
-                            {{ form.name(placeholder="请输入姓名") }}
-                            {% if form.name.errors %}
-                            {% for error in form.name.errors %}
-                            <div class="error-message">{{ error }}</div>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
-                        <div class="form-row">
-                            <label>年龄</label>
-                            {{ form.age(placeholder="请输入年龄") }}
-                            {% if form.age.errors %}
-                            {% for error in form.age.errors %}
-                            <div class="error-message">{{ error }}</div>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
-                        <div class="form-row">
-                            <label>学历</label>
-                            {{ form.education }}
-                            {% if form.education.errors %}
-                            {% for error in form.education.errors %}
-                            <div class="error-message">{{ error }}</div>
-                            {% endfor %}
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+        <form id="resumeForm" method="POST" action="{{ url_for('save_resume') }}">
+            {{ form.csrf_token }}
 
-                <div class="resume-card">
-                    <h3>教育经历</h3>
-                    <div id="education-list" class="education-list">
-                        {% for edu in education_list %}
-                        <div class="education-item">
-                            <input type="text" name="school[]" value="{{ edu.school }}" placeholder="学校名称">
-                            <input type="text" name="major[]" value="{{ edu.major }}" placeholder="专业">
-                            <input type="text" name="degree[]" value="{{ edu.degree }}" placeholder="学位">
-                            <input type="text" name="edu_time[]" value="{{ edu.time }}" placeholder="起止时间">
-                            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
-                        </div>
-                        {% endfor %}
+            <!-- 基本信息 -->
+            <div class="resume-card">
+                <h3><i class="fas fa-user"></i> 基本信息</h3>
+                <div class="info-form">
+                    <div class="form-row">
+                        <label>姓名</label>
+                        <input type="text" name="name" class="form-control" placeholder="请输入姓名"
+                            onchange="updatePreview()">
                     </div>
-                    <button type="button" class="add-button" onclick="addEducation()">添加教育经历</button>
+                    <div class="form-row">
+                        <label>年龄</label>
+                        <input type="number" name="age" class="form-control" placeholder="请输入年龄"
+                            onchange="updatePreview()">
+                    </div>
+                    <div class="form-row">
+                        <label>电话</label>
+                        <input type="tel" name="phone" class="form-control" placeholder="请输入联系电话"
+                            onchange="updatePreview()">
+                    </div>
+                    <div class="form-row">
+                        <label>邮箱</label>
+                        <input type="email" name="email" class="form-control" placeholder="请输入邮箱地址"
+                            onchange="updatePreview()">
+                    </div>
+                    <div class="form-row">
+                        <label>学历</label>
+                        <select name="education" class="form-control" onchange="updatePreview()">
+                            <option value="">请选择最高学历</option>
+                            <option value="高中">高中</option>
+                            <option value="专科">专科</option>
+                            <option value="本科">本科</option>
+                            <option value="硕士">硕士</option>
+                            <option value="博士">博士</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>个人简介</label>
+                        <textarea name="summary" class="form-control" rows="4" placeholder="请简要介绍自己的职业目标和特长"
+                            onchange="updatePreview()"></textarea>
+                    </div>
                 </div>
+            </div>
 
-                <div class="resume-card">
-                    <h3>工作/实习经历</h3>
-                    <div id="experience-list" class="experience-list">
-                        {% for exp in experience_list %}
-                        <div class="experience-item">
-                            <input type="text" name="company[]" value="{{ exp.company }}" placeholder="公司名称">
-                            <input type="text" name="position[]" value="{{ exp.position }}" placeholder="职位">
-                            <input type="text" name="exp_time[]" value="{{ exp.time }}" placeholder="起止时间">
-                            <textarea name="description[]" placeholder="工作描述">{{ exp.description }}</textarea>
-                            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="add-button" onclick="addExperience()">添加工作经历</button>
-                </div>
+            <!-- 教育经历 -->
+            <div class="resume-card">
+                <h3><i class="fas fa-graduation-cap"></i> 教育经历</h3>
+                <div id="education-list"></div>
+                <button type="button" class="add-button" onclick="addEducation()">
+                    <i class="fas fa-plus"></i> 添加教育经历
+                </button>
+            </div>
 
-                <div class="resume-card">
-                    <h3>项目经历</h3>
-                    <div id="project-list" class="project-list">
-                        {% for proj in project_list %}
-                        <div class="project-item">
-                            <input type="text" name="project_name[]" value="{{ proj.name }}" placeholder="项目名称">
-                            <input type="text" name="project_role[]" value="{{ proj.role }}" placeholder="担任角色">
-                            <input type="text" name="project_time[]" value="{{ proj.time }}" placeholder="起止时间">
-                            <textarea name="project_description[]" placeholder="项目描述">{{ proj.description }}</textarea>
-                            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="add-button" onclick="addProject()">添加项目经历</button>
-                </div>
-            </form>
+            <!-- 工作经历 -->
+            <div class="resume-card">
+                <h3><i class="fas fa-briefcase"></i> 工作经历</h3>
+                <div id="experience-list"></div>
+                <button type="button" class="add-button" onclick="addExperience()">
+                    <i class="fas fa-plus"></i> 添加工作经历
+                </button>
+            </div>
+
+            <!-- 项目经历 -->
+            <div class="resume-card">
+                <h3><i class="fas fa-project-diagram"></i> 项目经历</h3>
+                <div id="project-list"></div>
+                <button type="button" class="add-button" onclick="addProject()">
+                    <i class="fas fa-plus"></i> 添加项目经历
+                </button>
+            </div>
+
+            <!-- 技能特长 -->
+            <div class="resume-card">
+                <h3><i class="fas fa-star"></i> 技能特长</h3>
+                <div id="skill-list"></div>
+                <button type="button" class="add-button" onclick="addSkill()">
+                    <i class="fas fa-plus"></i> 添加技能
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="preview-section" id="preview">
+        <div class="preview-header">
+            <div class="preview-name" id="preview-name">姓名</div>
+            <div class="preview-contact" id="preview-contact">
+                <span id="preview-age"></span>
+                <span id="preview-education"></span>
+                <span id="preview-phone"></span>
+                <span id="preview-email"></span>
+            </div>
+        </div>
+
+        <div class="preview-summary">
+            <h4>个人简介</h4>
+            <p id="preview-summary-content"></p>
+        </div>
+
+        <div class="preview-education">
+            <h4>教育背景</h4>
+            <div id="preview-education-list"></div>
+        </div>
+
+        <div class="preview-experience">
+            <h4>工作经历</h4>
+            <div id="preview-experience-list"></div>
+        </div>
+
+        <div class="preview-projects">
+            <h4>项目经历</h4>
+            <div id="preview-project-list"></div>
+        </div>
+
+        <div class="preview-skills">
+            <h4>技能特长</h4>
+            <div id="preview-skill-list" class="skill-tags"></div>
         </div>
     </div>
 </div>
@@ -108,69 +491,311 @@
 
 {% block scripts %}
 <script>
-    // 添加教育经历
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        // 从localStorage加载保存的数据
+        loadSavedData();
+        // 初始化实时预览
+        updatePreview();
+    });
+
+    // 保存数据到localStorage
+    function saveToLocalStorage() {
+        const formData = new FormData(document.getElementById('resumeForm'));
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        localStorage.setItem('resumeData', JSON.stringify(data));
+    }
+
+    // 从localStorage加载数据
+    function loadSavedData() {
+        const savedData = localStorage.getItem('resumeData');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            const form = document.getElementById('resumeForm');
+            for (let key in data) {
+                const input = form.elements[key];
+                if (input) {
+                    input.value = data[key];
+                }
+            }
+        }
+    }
+
+    // 更新预览
+    function updatePreview() {
+        // 更新基本信息
+        document.getElementById('preview-name').textContent =
+            document.querySelector('input[name="name"]').value || '姓名';
+
+        const age = document.querySelector('input[name="age"]').value;
+        const education = document.querySelector('select[name="education"]').value;
+        const phone = document.querySelector('input[name="phone"]').value;
+        const email = document.querySelector('input[name="email"]').value;
+
+        document.getElementById('preview-age').textContent = age ? `${age}岁 · ` : '';
+        document.getElementById('preview-education').textContent = education ? `${education} · ` : '';
+        document.getElementById('preview-phone').textContent = phone ? `${phone} · ` : '';
+        document.getElementById('preview-email').textContent = email || '';
+
+        // 更新个人简介
+        document.getElementById('preview-summary-content').textContent =
+            document.querySelector('textarea[name="summary"]').value || '暂无简介';
+
+        // 更新教育经历
+        const educationList = document.getElementById('preview-education-list');
+        educationList.innerHTML = '';
+        document.querySelectorAll('.education-item').forEach(item => {
+            const school = item.querySelector('input[name="school[]"]').value;
+            const major = item.querySelector('input[name="major[]"]').value;
+            const degree = item.querySelector('input[name="degree[]"]').value;
+            const time = item.querySelector('input[name="edu_time[]"]').value;
+
+            if (school || major || degree || time) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <div class="preview-item-header">
+                        <span class="preview-item-title">${school || ''} - ${major || ''}</span>
+                        <span class="preview-item-time">${time || ''}</span>
+                    </div>
+                    <div class="preview-item-content">${degree || ''}</div>
+                `;
+                educationList.appendChild(div);
+            }
+        });
+
+        // 更新工作经历
+        const experienceList = document.getElementById('preview-experience-list');
+        experienceList.innerHTML = '';
+        document.querySelectorAll('.experience-item').forEach(item => {
+            const company = item.querySelector('input[name="company[]"]').value;
+            const position = item.querySelector('input[name="position[]"]').value;
+            const time = item.querySelector('input[name="exp_time[]"]').value;
+            const description = item.querySelector('textarea[name="description[]"]').value;
+
+            if (company || position || time || description) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <div class="preview-item-header">
+                        <span class="preview-item-title">${company || ''} - ${position || ''}</span>
+                        <span class="preview-item-time">${time || ''}</span>
+                    </div>
+                    <div class="preview-item-content">${description || ''}</div>
+                `;
+                experienceList.appendChild(div);
+            }
+        });
+
+        // 更新项目经历
+        const projectList = document.getElementById('preview-project-list');
+        projectList.innerHTML = '';
+        document.querySelectorAll('.project-item').forEach(item => {
+            const name = item.querySelector('input[name="project_name[]"]').value;
+            const role = item.querySelector('input[name="project_role[]"]').value;
+            const time = item.querySelector('input[name="project_time[]"]').value;
+            const description = item.querySelector('textarea[name="project_description[]"]').value;
+
+            if (name || role || time || description) {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <div class="preview-item-header">
+                        <span class="preview-item-title">${name || ''} - ${role || ''}</span>
+                        <span class="preview-item-time">${time || ''}</span>
+                    </div>
+                    <div class="preview-item-content">${description || ''}</div>
+                `;
+                projectList.appendChild(div);
+            }
+        });
+
+        // 更新技能特长
+        const skillList = document.getElementById('preview-skill-list');
+        skillList.innerHTML = '';
+        document.querySelectorAll('.skill-item').forEach(item => {
+            const name = item.querySelector('input[name="skill_name[]"]').value;
+            const level = item.querySelector('select[name="skill_level[]"]').value;
+
+            if (name && level) {
+                const div = document.createElement('div');
+                div.className = 'skill-tag';
+                div.textContent = `${name} (${level})`;
+                skillList.appendChild(div);
+            }
+        });
+
+        // 保存到localStorage
+        saveToLocalStorage();
+    }
+
     function addEducation() {
         const list = document.getElementById('education-list');
         const item = document.createElement('div');
         item.className = 'education-item';
         item.innerHTML = `
-            <input type="text" name="school[]" placeholder="学校名称">
-            <input type="text" name="major[]" placeholder="专业">
-            <input type="text" name="degree[]" placeholder="学位">
-            <input type="text" name="edu_time[]" placeholder="起止时间">
             <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+            <div class="info-form">
+                <div class="form-row">
+                    <label>学校名称</label>
+                    <input type="text" name="school[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>专业</label>
+                    <input type="text" name="major[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>学位</label>
+                    <input type="text" name="degree[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>在读时间</label>
+                    <input type="text" name="edu_time[]" class="form-control" onchange="updatePreview()">
+                </div>
+            </div>
         `;
         list.appendChild(item);
+        scrollToNewItem(item);
+        updatePreview();
     }
 
-    // 添加工作经历
     function addExperience() {
         const list = document.getElementById('experience-list');
         const item = document.createElement('div');
         item.className = 'experience-item';
         item.innerHTML = `
-            <input type="text" name="company[]" placeholder="公司名称">
-            <input type="text" name="position[]" placeholder="职位">
-            <input type="text" name="exp_time[]" placeholder="起止时间">
-            <textarea name="description[]" placeholder="工作描述"></textarea>
             <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+            <div class="info-form">
+                <div class="form-row">
+                    <label>公司名称</label>
+                    <input type="text" name="company[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>职位</label>
+                    <input type="text" name="position[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>工作时间</label>
+                    <input type="text" name="exp_time[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>工作描述</label>
+                    <textarea name="description[]" class="form-control" rows="4" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
         `;
         list.appendChild(item);
+        scrollToNewItem(item);
+        updatePreview();
     }
 
-    // 添加项目经历
     function addProject() {
         const list = document.getElementById('project-list');
         const item = document.createElement('div');
         item.className = 'project-item';
         item.innerHTML = `
-            <input type="text" name="project_name[]" placeholder="项目名称">
-            <input type="text" name="project_role[]" placeholder="担任角色">
-            <input type="text" name="project_time[]" placeholder="起止时间">
-            <textarea name="project_description[]" placeholder="项目描述"></textarea>
             <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+            <div class="info-form">
+                <div class="form-row">
+                    <label>项目名称</label>
+                    <input type="text" name="project_name[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>担任角色</label>
+                    <input type="text" name="project_role[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>项目时间</label>
+                    <input type="text" name="project_time[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>项目描述</label>
+                    <textarea name="project_description[]" class="form-control" rows="4" onchange="updatePreview()"></textarea>
+                </div>
+            </div>
         `;
         list.appendChild(item);
+        scrollToNewItem(item);
+        updatePreview();
     }
 
-    // 删除条目
+    function addSkill() {
+        const list = document.getElementById('skill-list');
+        const item = document.createElement('div');
+        item.className = 'skill-item';
+        item.innerHTML = `
+            <button type="button" class="remove-btn" onclick="removeItem(this)">删除</button>
+            <div class="info-form">
+                <div class="form-row">
+                    <label>技能名称</label>
+                    <input type="text" name="skill_name[]" class="form-control" onchange="updatePreview()">
+                </div>
+                <div class="form-row">
+                    <label>掌握程度</label>
+                    <select name="skill_level[]" class="form-control" onchange="updatePreview()">
+                        <option value="入门">入门</option>
+                        <option value="熟练">熟练</option>
+                        <option value="精通">精通</option>
+                    </select>
+                </div>
+            </div>
+        `;
+        list.appendChild(item);
+        scrollToNewItem(item);
+        updatePreview();
+    }
+
+    function scrollToNewItem(item) {
+        item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     function removeItem(button) {
-        button.parentElement.remove();
+        const item = button.parentElement;
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+            item.remove();
+            updatePreview();
+        }, 300);
     }
 
-    // 保存简历
     function saveResume() {
-        document.getElementById('resumeForm').submit();
+        const form = document.getElementById('resumeForm');
+        const submitBtn = document.querySelector('.save-btn');
+        const originalText = submitBtn.innerHTML;
+
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+        submitBtn.disabled = true;
+
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('简历保存成功！', 'success');
+                    saveToLocalStorage();
+                } else {
+                    showMessage(data.message || '保存失败，请重试', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('保存失败，请重试', 'error');
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
     }
 
-    // 导出PDF
     function exportPDF() {
-        const element = document.getElementById('resume-content');
-        const buttons = element.querySelectorAll('.remove-btn, .add-button');
-
-        // 临时隐藏按钮
-        buttons.forEach(btn => btn.style.display = 'none');
-
+        const element = document.getElementById('preview');
         const opt = {
             margin: 1,
             filename: '我的简历.pdf',
@@ -179,10 +804,34 @@
             jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
 
+        showMessage('正在生成PDF，请稍候...', 'info');
+
         html2pdf().set(opt).from(element).save().then(() => {
-            // 恢复按钮显示
-            buttons.forEach(btn => btn.style.display = 'block');
+            showMessage('PDF导出成功！', 'success');
         });
     }
+
+    function showMessage(message, type = 'info') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = message;
+        document.body.appendChild(messageDiv);
+
+        setTimeout(() => {
+            messageDiv.style.opacity = '0';
+            setTimeout(() => messageDiv.remove(), 300);
+        }, 3000);
+    }
+
+    // 添加表单验证
+    document.getElementById('resumeForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        saveResume();
+    });
+
+    // 为所有输入框添加实时预览功能
+    document.querySelectorAll('input, textarea, select').forEach(input => {
+        input.addEventListener('input', updatePreview);
+    });
 </script>
 {% endblock %}
