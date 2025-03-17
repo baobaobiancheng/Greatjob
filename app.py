@@ -7,8 +7,14 @@ from forms import LoginForm, RegisterForm, ResumeForm, ChangePasswordForm
 import requests
 import json
 import os
+import numpy as np
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from sklearn.metrics.pairwise import cosine_similarity
+
+# API配置
+DEEPSEEK_API_KEY = "sk-322ad34d33b543e28c9df737595c5638"  # 请替换为实际的API密钥
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"  # 请替换为实际的API地址
 
 # 数据库配置
 DB_CONFIG = {
@@ -28,6 +34,31 @@ def get_db():
     except Exception as e:
         print(f"数据库连接失败: {str(e)}")
         return None
+
+def init_admin():
+    """初始化管理员账号"""
+    try:
+        db = get_db()
+        with db.cursor() as cursor:
+            # 检查admin账号是否已存在
+            cursor.execute("SELECT id FROM users WHERE username = 'admin'")
+            if not cursor.fetchone():
+                # 创建admin账号
+                hashed_password = generate_password_hash('admin123')
+                cursor.execute(
+                    "INSERT INTO users (username, password, telephone) VALUES (%s, %s, %s)",
+                    ('admin', hashed_password, '13800000000')
+                )
+                db.commit()
+                print("管理员账号初始化成功")
+    except Exception as e:
+        print(f"初始化管理员账号失败: {str(e)}")
+    finally:
+        if 'db' in locals():
+            db.close()
+
+# 初始化管理员账号
+init_admin()
 
 # 创建数据库连接的装饰器
 def with_db(func):
@@ -238,6 +269,7 @@ def index():
         selected_city = request.args.get('city', '全国')
         selected_type = request.args.get('job_type', '不限')
         search_title = request.args.get('title', '')
+        search_query = request.args.get('search', '')
         
         db = get_db()
         with db.cursor() as cursor:
@@ -252,6 +284,12 @@ def index():
             
             # 组合查询条件
             conditions = []
+            
+            # 添加搜索条件（职位名称或公司名称）
+            if search_query:
+                conditions.append("(j.title LIKE %s OR j.company_name LIKE %s)")
+                params.append(f"%{search_query}%")
+                params.append(f"%{search_query}%")
             
             # 添加职位名称搜索条件
             if search_title:
@@ -288,6 +326,7 @@ def index():
                                 selected_city=selected_city,
                                 selected_type=selected_type,
                                 search_title=search_title,
+                                search_query=search_query,
                                 user=session.get('user_id'))
                                 
     except Exception as e:
@@ -297,6 +336,7 @@ def index():
                             selected_city='全国',
                             selected_type='不限',
                             search_title='',
+                            search_query='',
                             user=session.get('user_id'))
     finally:
         if 'db' in locals():
@@ -306,41 +346,40 @@ def index():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        try:
-            username = form.username.data
-            password = form.password.data
+        username = form.username.data
+        password = form.password.data
+        
+        db = get_db()
+        cursor = db.cursor()
+        # 明确指定要查询的字段
+        cursor.execute('SELECT id, username, password, telephone FROM users WHERE username = %s', (username,))
+        user = cursor.fetchone()
+        
+        if user and check_password_hash(user['password'], password):
+            # 更新用户的updated_at字段
+            try:
+                cursor.execute('UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = %s', (user['id'],))
+                db.commit()
+            except Exception as e:
+                print(f"更新用户最后登录时间失败: {str(e)}")
+                db.rollback()
             
-            db = get_db()
-            with db.cursor() as cursor:
-                # 查询用户
-                cursor.execute(
-                    "SELECT id, username, password FROM users WHERE username = %s",
-                    (username,)
-                )
-                user = cursor.fetchone()
-                
-                if user and check_password_hash(user['password'], password):
-                    # 登录成功，存储用户信息到session
-                    session['user_id'] = username
-                    session['logged_in'] = True  # 添加登录状态标记
-                    
-                    # 检查是否有next参数，有则跳转到对应页面
-                    next_page = request.args.get('next')
-                    if next_page:
-                        return redirect(next_page)
-                    return redirect(url_for('personal_center'))  # 默认跳转到个人中心
-                else:
-                    flash('用户名或密码错误')
-                    return redirect(url_for('login'))
-                    
-        except Exception as e:
-            print(f"登录错误: {str(e)}")
-            flash('登录失败，请重试')
-            return redirect(url_for('login'))
-        finally:
-            if 'db' in locals():
-                db.close()
-    
+            # 设置session
+            session.clear()  # 清除之前的session
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            
+            # 如果是管理员账号，跳转到后台管理页面
+            if username == 'admin':
+                return redirect(url_for('admin'))
+            
+            # 如果有next参数，跳转到之前的页面
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('index'))
+            
+        flash('用户名或密码错误')
     return render_template('login.html', form=form)
 
 @app.route('/logout')
@@ -401,9 +440,8 @@ def register():
     return render_template('register.html', form=form)
 
 @app.route('/competitive-analysis')
-@login_required
 def competitive_analysis():
-    return render_template('competitive_analysis.html', user=session.get('user_id'))
+    return render_template('competitive_analysis.html')
 
 @app.route('/job-analysis')
 @login_required
@@ -486,22 +524,14 @@ def get_salary_distribution():
                     END as salary_range,
                     COUNT(*) as count
                 FROM jobs
+                WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)
             """
+            params = [time_range]
             
-            # 添加分类筛选
+            # 添加职位筛选
             if category != 'all':
-                query += " WHERE category = %s"
-                params = [category]
-            else:
-                params = []
-                
-            # 添加时间范围
-            if query.find('WHERE') > 0:
-                query += " AND"
-            else:
-                query += " WHERE"
-            query += " created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)"
-            params.append(time_range)
+                query += " AND title LIKE %s"
+                params.append(f"%{category}%")
             
             # 分组和排序
             query += " GROUP BY salary_range ORDER BY salary_range"
@@ -542,19 +572,14 @@ def get_skill_requirements():
             query = """
                 SELECT job_type as tag, COUNT(*) as count
                 FROM jobs
-                WHERE 1=1
+                WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)
             """
+            params = [time_range]
             
-            # 添加分类筛选
+            # 添加职位筛选
             if category != 'all':
-                query += " AND category = %s"
-                params = [category]
-            else:
-                params = []
-                
-            # 添加时间范围
-            query += " AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)"
-            params.append(time_range)
+                query += " AND title LIKE %s"
+                params.append(f"%{category}%")
             
             # 分组和排序，限制返回前10个结果
             query += " GROUP BY job_type ORDER BY count DESC LIMIT 10"
@@ -598,19 +623,14 @@ def get_education_distribution():
                     END as education_level,
                     COUNT(*) as count
                 FROM jobs
-                WHERE 1=1
+                WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)
             """
+            params = [time_range]
             
-            # 添加分类筛选
+            # 添加职位筛选
             if category != 'all':
-                query += " AND category = %s"
-                params = [category]
-            else:
-                params = []
-                
-            # 添加时间范围
-            query += " AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)"
-            params.append(time_range)
+                query += " AND title LIKE %s"
+                params.append(f"%{category}%")
             
             # 分组和排序
             query += " GROUP BY education_level ORDER BY count DESC"
@@ -659,19 +679,14 @@ def get_experience_distribution():
                     END as experience_level,
                     COUNT(*) as count
                 FROM jobs
-                WHERE 1=1
+                WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)
             """
+            params = [time_range]
             
-            # 添加分类筛选
+            # 添加职位筛选
             if category != 'all':
-                query += " AND category = %s"
-                params = [category]
-            else:
-                params = []
-                
-            # 添加时间范围
-            query += " AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)"
-            params.append(time_range)
+                query += " AND title LIKE %s"
+                params.append(f"%{category}%")
             
             # 分组和排序
             query += " GROUP BY experience_level ORDER BY count DESC"
@@ -862,9 +877,9 @@ def personal_center():
         with db.cursor() as cursor:
             # 获取用户基本信息
             cursor.execute("""
-                SELECT username, telephone 
+                SELECT id, username, telephone 
                 FROM users 
-                WHERE username = %s
+                WHERE id = %s
             """, (user_id,))
             user_data = cursor.fetchone()
             
@@ -876,7 +891,7 @@ def personal_center():
             # 获取用户的求职意向
             cursor.execute("""
                 SELECT * FROM job_intentions 
-                WHERE user_id = (SELECT id FROM users WHERE username = %s)
+                WHERE user_id = %s
             """, (user_id,))
             job_intention = cursor.fetchone() or {}
             
@@ -885,7 +900,7 @@ def personal_center():
                 SELECT j.* 
                 FROM jobs j 
                 JOIN saved_jobs s ON j.id = s.job_id 
-                WHERE s.user_id = (SELECT id FROM users WHERE username = %s)
+                WHERE s.user_id = %s
             """, (user_id,))
             saved_jobs = cursor.fetchall() or []
             
@@ -894,13 +909,29 @@ def personal_center():
                 SELECT j.*, a.status, a.created_at as apply_time 
                 FROM jobs j 
                 JOIN job_applications a ON j.id = a.job_id 
-                WHERE a.user_id = (SELECT id FROM users WHERE username = %s)
+                WHERE a.user_id = %s
                 ORDER BY a.created_at DESC
             """, (user_id,))
             applied_jobs = cursor.fetchall() or []
             
+            # 处理职位标签
+            for job in saved_jobs:
+                job['tags'] = []
+                cursor.execute("SELECT tag FROM job_tags WHERE job_id = %s", (job['id'],))
+                tags = cursor.fetchall()
+                if tags:
+                    job['tags'] = [tag['tag'] for tag in tags]
+
+            # 处理投递记录的标签
+            for job in applied_jobs:
+                job['tags'] = []
+                cursor.execute("SELECT tag FROM job_tags WHERE job_id = %s", (job['id'],))
+                tags = cursor.fetchall()
+                if tags:
+                    job['tags'] = [tag['tag'] for tag in tags]
+            
             return render_template('personal_center.html',
-                                user=user_id,
+                                user=user_data['username'],
                                 telephone=user_data['telephone'],
                                 saved_jobs=saved_jobs,
                                 applied_jobs=applied_jobs,
@@ -942,8 +973,42 @@ def change_password():
 @app.route('/apply-job/<int:job_id>', methods=['POST'])
 @login_required
 def apply_job(job_id):
-    # 这里添加申请职位的逻辑
-    return jsonify({'success': True, 'message': '申请成功'})
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': '请先登录'})
+            
+        db = get_db()
+        with db.cursor() as cursor:
+            # 检查职位是否存在
+            cursor.execute("SELECT id FROM jobs WHERE id = %s", (job_id,))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'message': '职位不存在'})
+            
+            # 检查是否已经申请过该职位
+            cursor.execute("""
+                SELECT id FROM job_applications 
+                WHERE user_id = %s AND job_id = %s
+            """, (user_id, job_id))
+            
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': '您已申请过该职位'})
+            
+            # 添加申请记录
+            cursor.execute("""
+                INSERT INTO job_applications (user_id, job_id, status) 
+                VALUES (%s, %s, '待处理')
+            """, (user_id, job_id))
+            
+            db.commit()
+            return jsonify({'success': True, 'message': '申请成功'})
+            
+    except Exception as e:
+        print(f"申请职位错误: {str(e)}")
+        return jsonify({'success': False, 'message': f'申请失败：{str(e)}'})
+    finally:
+        if 'db' in locals():
+            db.close()
 
 @app.route('/save-job/<int:job_id>', methods=['POST'])
 @login_required
@@ -955,14 +1020,6 @@ def save_job(job_id):
             
         db = get_db()
         with db.cursor() as cursor:
-            # 获取用户ID
-            cursor.execute("SELECT id FROM users WHERE username = %s", (user_id,))
-            user_result = cursor.fetchone()
-            if not user_result:
-                return jsonify({'success': False, 'message': '用户不存在'})
-            
-            user_db_id = user_result['id']
-            
             # 检查职位是否存在
             cursor.execute("SELECT id FROM jobs WHERE id = %s", (job_id,))
             if not cursor.fetchone():
@@ -972,7 +1029,7 @@ def save_job(job_id):
             cursor.execute("""
                 SELECT id FROM saved_jobs 
                 WHERE user_id = %s AND job_id = %s
-            """, (user_db_id, job_id))
+            """, (user_id, job_id))
             
             if cursor.fetchone():
                 return jsonify({'success': False, 'message': '已收藏该职位'})
@@ -981,7 +1038,7 @@ def save_job(job_id):
             cursor.execute("""
                 INSERT INTO saved_jobs (user_id, job_id) 
                 VALUES (%s, %s)
-            """, (user_db_id, job_id))
+            """, (user_id, job_id))
             
             db.commit()
             return jsonify({'success': True, 'message': '收藏成功'})
@@ -1003,19 +1060,11 @@ def unsave_job(job_id):
             
         db = get_db()
         with db.cursor() as cursor:
-            # 获取用户ID
-            cursor.execute("SELECT id FROM users WHERE username = %s", (user_id,))
-            user_result = cursor.fetchone()
-            if not user_result:
-                return jsonify({'success': False, 'message': '用户不存在'})
-            
-            user_db_id = user_result['id']
-            
             # 检查是否存在该收藏
             cursor.execute("""
                 SELECT id FROM saved_jobs 
                 WHERE user_id = %s AND job_id = %s
-            """, (user_db_id, job_id))
+            """, (user_id, job_id))
             
             if not cursor.fetchone():
                 return jsonify({'success': False, 'message': '未找到该收藏记录'})
@@ -1024,7 +1073,7 @@ def unsave_job(job_id):
             cursor.execute("""
                 DELETE FROM saved_jobs 
                 WHERE user_id = %s AND job_id = %s
-            """, (user_db_id, job_id))
+            """, (user_id, job_id))
             
             db.commit()
             return jsonify({'success': True, 'message': '取消收藏成功'})
@@ -1055,16 +1104,8 @@ def save_job_intention():
         
         db = get_db()
         with db.cursor() as cursor:
-            # 获取用户ID
-            cursor.execute("SELECT id FROM users WHERE username = %s", (user_id,))
-            user_result = cursor.fetchone()
-            if not user_result:
-                return jsonify({'success': False, 'message': '用户不存在'})
-            
-            user_db_id = user_result['id']
-            
             # 检查是否已存在求职意向
-            cursor.execute("SELECT id FROM job_intentions WHERE user_id = %s", (user_db_id,))
+            cursor.execute("SELECT id FROM job_intentions WHERE user_id = %s", (user_id,))
             existing = cursor.fetchone()
             
             if existing:
@@ -1080,7 +1121,7 @@ def save_job_intention():
                         updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = %s
                 """, (desired_position, desired_city, salary_min, salary_max, 
-                      job_type, available_time, user_db_id))
+                      job_type, available_time, user_id))
             else:
                 # 创建新记录
                 cursor.execute("""
@@ -1088,7 +1129,7 @@ def save_job_intention():
                     (user_id, desired_position, desired_city, salary_min, salary_max, 
                      job_type, available_time)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (user_db_id, desired_position, desired_city, salary_min, 
+                """, (user_id, desired_position, desired_city, salary_min, 
                       salary_max, job_type, available_time))
             
             db.commit()
@@ -1100,10 +1141,6 @@ def save_job_intention():
     finally:
         if 'db' in locals():
             db.close()
-
-# 更新API配置
-DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', 'sk-322ad34d33b543e28c9df737595c5638')
-DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"  # 完整的API端点
 
 # 面试相关的系统提示词
 TECH_INTERVIEW_PROMPT = """你是一位专业的技术面试官，根据应聘者选择的岗位和难度级别进行技术面试。
@@ -1276,19 +1313,16 @@ def get_ai_response(system_prompt, user_message):
             timeout=30
         )
         
-        # 打印调试信息
-        print(f"API Response Status: {response.status_code}")
-        print(f"API Response: {response.text}")
-        
         if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
+            result = response.json()
+            return result['choices'][0]['message']['content']
         else:
-            # 如果API调用失败，使用备用响应
-            raise Exception(f"API返回错误: {response.status_code}")
+            print(f"API调用失败: {response.status_code} - {response.text}")
+            return "抱歉，我现在无法回答您的问题，请稍后再试。"
             
     except Exception as e:
-        print(f"Error in get_ai_response: {str(e)}")
-        raise
+        print(f"获取AI回复失败: {str(e)}")
+        return "抱歉，系统出现了一些问题，请稍后再试。"
 
 # 添加备用响应
 def get_fallback_response(interview_type, position, difficulty=None):
@@ -1432,75 +1466,128 @@ def calculate_job_similarity(job_intention, job):
 @app.route('/recommend-jobs', methods=['GET'])
 @login_required
 def recommend_jobs():
+    """推荐职位
+    
+    根据用户的求职意向和浏览历史推荐职位
+    """
     try:
         user_id = session.get('user_id')
-        if not user_id:
-            return jsonify({'success': False, 'message': '请先登录'})
         
+        # 获取用户收藏和投递数量
         db = get_db()
         with db.cursor() as cursor:
-            # 获取用户ID
-            cursor.execute("SELECT id FROM users WHERE username = %s", (user_id,))
-            user_result = cursor.fetchone()
-            if not user_result:
-                return jsonify({'success': False, 'message': '用户不存在'})
+            # 获取收藏数量
+            cursor.execute("SELECT COUNT(*) as saved_count FROM saved_jobs WHERE user_id = %s", (user_id,))
+            saved_result = cursor.fetchone()
+            saved_count = saved_result['saved_count'] if saved_result else 0
             
-            user_db_id = user_result['id']
-            
+            # 获取投递数量
+            cursor.execute("SELECT COUNT(*) as applied_count FROM job_applications WHERE user_id = %s", (user_id,))
+            applied_result = cursor.fetchone()
+            applied_count = applied_result['applied_count'] if applied_result else 0
+        
+        # 首先尝试使用协同过滤推荐
+        collaborative_jobs = []
+        recommendation_type = "基于内容推荐"
+        recommendation_reason = None
+        
+        # 只有当用户收藏和投递的职位都达到5条时，才使用协同过滤
+        if saved_count >= 5 and applied_count >= 5:
+            collaborative_jobs = get_collaborative_recommendations(user_id)
+            if collaborative_jobs:
+                recommendation_type = "协同过滤推荐"
+        
+        # 如果协同过滤没有结果，使用基于内容的推荐
+        if not collaborative_jobs:
             # 获取用户的求职意向
-            cursor.execute("""
-                SELECT * FROM job_intentions 
-                WHERE user_id = %s
-            """, (user_db_id,))
-            job_intention = cursor.fetchone()
+            with db.cursor() as cursor:
+                cursor.execute("""
+                    SELECT * FROM job_intentions WHERE user_id = %s
+                """, (user_id,))
+                job_intention = cursor.fetchone()
             
+            # 如果没有求职意向，返回热门职位
             if not job_intention:
+                with db.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT j.*, GROUP_CONCAT(t.tag) as tags
+                        FROM jobs j
+                        LEFT JOIN job_tags t ON j.id = t.job_id
+                        GROUP BY j.id
+                        LIMIT 10
+                    """)
+                    jobs = cursor.fetchall()
+                    
+                    # 处理标签
+                    for job in jobs:
+                        job['tags'] = job['tags'].split(',') if job['tags'] else []
+                
+                recommendation_reason = "您尚未设置求职意向，这里是一些热门职位"
                 return jsonify({
-                    'success': False, 
-                    'message': '请先设置求职意向'
+                    'success': True, 
+                    'jobs': jobs, 
+                    'recommendation_type': recommendation_type,
+                    'recommendation_reason': recommendation_reason,
+                    'saved_count': saved_count,
+                    'applied_count': applied_count
                 })
             
-            # 获取所有职位
-            cursor.execute("""
-                SELECT j.*, GROUP_CONCAT(t.tag) as tags
-                FROM jobs j
-                LEFT JOIN job_tags t ON j.id = t.job_id
-                GROUP BY j.id
-            """)
-            all_jobs = cursor.fetchall()
+            # 基于求职意向推荐职位
+            with db.cursor() as cursor:
+                # 获取所有职位
+                cursor.execute("""
+                    SELECT j.*, GROUP_CONCAT(t.tag) as tags
+                    FROM jobs j
+                    LEFT JOIN job_tags t ON j.id = t.job_id
+                    GROUP BY j.id
+                """)
+                all_jobs = cursor.fetchall()
+                
+                # 处理标签
+                for job in all_jobs:
+                    job['tags'] = job['tags'].split(',') if job['tags'] else []
             
-            # 计算每个职位的相似度得分
+            # 计算每个职位与求职意向的相似度
             job_scores = []
             for job in all_jobs:
-                # 转换tags字符串为列表
-                job['tags'] = job['tags'].split(',') if job['tags'] else []
-                
-                # 计算相似度得分
                 similarity = calculate_job_similarity(job_intention, job)
                 job_scores.append((job, similarity))
             
-            # 按相似度得分排序
+            # 按相似度排序
             job_scores.sort(key=lambda x: x[1], reverse=True)
             
-            # 获取前10个最相似的职位
+            # 取前10个
             recommended_jobs = [job for job, score in job_scores[:10]]
             
-            return jsonify({
-                'success': True,
-                'jobs': recommended_jobs
-            })
+            recommendation_reason = f"基于您的求职意向：{job_intention['desired_position']} - {job_intention['desired_city']}"
             
+            return jsonify({
+                'success': True, 
+                'jobs': recommended_jobs, 
+                'recommendation_type': recommendation_type,
+                'recommendation_reason': recommendation_reason,
+                'saved_count': saved_count,
+                'applied_count': applied_count
+            })
+        else:
+            # 使用协同过滤的结果
+            return jsonify({
+                'success': True, 
+                'jobs': collaborative_jobs, 
+                'recommendation_type': recommendation_type,
+                'saved_count': saved_count,
+                'applied_count': applied_count
+            })
+    
     except Exception as e:
         print(f"推荐职位错误: {str(e)}")
-        return jsonify({'success': False, 'message': f'获取推荐失败：{str(e)}'})
-    finally:
-        if 'db' in locals():
-            db.close()
+        return jsonify({'success': False, 'message': '获取推荐职位失败，请稍后再试'})
 
 @app.route('/api/job-analysis/city-distribution', methods=['GET'])
 def get_city_distribution():
     try:
         time_range = request.args.get('time_range', '30')
+        category = request.args.get('category', 'all')
         
         db = get_db()
         with db.cursor() as cursor:
@@ -1516,17 +1603,25 @@ def get_city_distribution():
                     COUNT(*) as count
                 FROM jobs
                 WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL %s DAY)
-                GROUP BY 
+            """
+            params = [time_range]
+            
+            # 添加职位筛选
+            if category != 'all':
+                query += " AND title LIKE %s"
+                params.append(f"%{category}%")
+            
+            # 分组和排序
+            query += """ GROUP BY 
                     CASE 
                         WHEN location IN ('北京', '上海', '广州', '深圳', '杭州', '天津', '西安', 
                                         '苏州', '武汉', '厦门', '长沙', '成都', '郑州', '重庆') 
                         THEN location 
                         ELSE '其他城市'
                     END
-                ORDER BY count DESC
-            """
+                ORDER BY count DESC"""
             
-            cursor.execute(query, [time_range])
+            cursor.execute(query, params)
             results = cursor.fetchall()
             
             return jsonify({
@@ -1559,9 +1654,10 @@ def get_benefits_wordcloud():
             """
             params = [time_range]
             
+            # 添加职位筛选
             if category != 'all':
-                query += " AND category = %s"
-                params.append(category)
+                query += " AND title LIKE %s"
+                params.append(f"%{category}%")
                 
             cursor.execute(query, params)
             results = cursor.fetchall()
@@ -1592,6 +1688,712 @@ def get_benefits_wordcloud():
             'success': False,
             'message': '获取福利数据失败'
         })
+
+@app.route('/api/competitive-analysis', methods=['GET'])
+@login_required
+def get_competitive_analysis():
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': '请先登录'})
+            
+        db = get_db()
+        with db.cursor() as cursor:
+            # 获取用户ID
+            cursor.execute("SELECT id FROM users WHERE username = %s", (user_id,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                return jsonify({'success': False, 'message': '用户不存在'})
+            
+            user_db_id = user_result['id']
+            
+            # 获取用户简历信息
+            cursor.execute("""
+                SELECT r.*, 
+                       GROUP_CONCAT(DISTINCT e.skill) as skills,
+                       COUNT(DISTINCT p.id) as project_count,
+                       MAX(w.company) as latest_company
+                FROM resumes r
+                LEFT JOIN resume_skills e ON r.id = e.resume_id
+                LEFT JOIN resume_projects p ON r.id = p.resume_id
+                LEFT JOIN resume_work_experience w ON r.id = w.resume_id
+                WHERE r.user_id = %s
+                GROUP BY r.id
+            """, (user_db_id,))
+            resume = cursor.fetchone()
+            
+            if not resume:
+                return jsonify({'success': False, 'message': '请先完善简历信息'})
+            
+            # 获取求职意向
+            cursor.execute("""
+                SELECT * FROM job_intentions 
+                WHERE user_id = %s
+            """, (user_db_id,))
+            job_intention = cursor.fetchone()
+            
+            if not job_intention:
+                return jsonify({'success': False, 'message': '请先设置求职意向'})
+            
+            # 获取市场数据
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_jobs,
+                    AVG(CAST(
+                        REGEXP_REPLACE(
+                            SUBSTRING_INDEX(
+                                REGEXP_REPLACE(LOWER(salary), '[^0-9-]', ''),
+                                '-',
+                                1
+                            ),
+                            '[^0-9]', ''
+                        ) AS DECIMAL
+                    )) as avg_salary,
+                    GROUP_CONCAT(DISTINCT required_skills) as market_skills
+                FROM jobs
+                WHERE title LIKE %s
+                AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+            """, (f"%{job_intention['desired_position']}%",))
+            market_data = cursor.fetchone()
+            
+            # 计算技能匹配度
+            user_skills = set(resume['skills'].split(',')) if resume['skills'] else set()
+            market_skills = set(market_data['market_skills'].split(',')) if market_data['market_skills'] else set()
+            
+            skill_match = []
+            if market_skills:
+                for skill in market_skills:
+                    match_score = 100 if skill in user_skills else 0
+                    skill_match.append({
+                        'name': skill,
+                        'value': match_score
+                    })
+            
+            # 计算综合评分
+            score = calculate_competitive_score(resume, job_intention, market_data)
+            
+            # 生成优势和建议
+            advantages, suggestions = generate_analysis(resume, job_intention, market_data, score)
+            
+            # 获取市场需求分布
+            cursor.execute("""
+                SELECT job_type, COUNT(*) as count
+                FROM jobs
+                WHERE title LIKE %s
+                AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+                GROUP BY job_type
+                ORDER BY count DESC
+                LIMIT 5
+            """, (f"%{job_intention['desired_position']}%",))
+            market_demand = [{
+                'name': row['job_type'],
+                'value': row['count']
+            } for row in cursor.fetchall()]
+            
+            return jsonify({
+                'success': True,
+                'score': score,
+                'skillMatch': skill_match,
+                'marketDemand': market_demand,
+                'advantages': advantages,
+                'suggestions': suggestions
+            })
+            
+    except Exception as e:
+        print(f"竞争力分析错误: {str(e)}")
+        return jsonify({'success': False, 'message': f'分析失败：{str(e)}'})
+    finally:
+        if 'db' in locals():
+            db.close()
+
+def calculate_competitive_score(resume, job_intention, market_data):
+    """计算综合竞争力评分"""
+    score = 0
+    
+    # 教育背景评分 (25分)
+    education_scores = {
+        '博士': 25,
+        '硕士': 20,
+        '本科': 15,
+        '大专': 10
+    }
+    score += education_scores.get(resume['education'], 5)
+    
+    # 工作经验评分 (25分)
+    experience_years = len(resume.get('work_experience', []))
+    if experience_years >= 5:
+        score += 25
+    elif experience_years >= 3:
+        score += 20
+    elif experience_years >= 1:
+        score += 15
+    else:
+        score += 10
+    
+    # 项目经验评分 (25分)
+    project_count = resume['project_count']
+    if project_count >= 5:
+        score += 25
+    elif project_count >= 3:
+        score += 20
+    elif project_count >= 1:
+        score += 15
+    else:
+        score += 10
+    
+    # 技能匹配度评分 (25分)
+    if market_data['market_skills']:
+        user_skills = set(resume['skills'].split(',')) if resume['skills'] else set()
+        market_skills = set(market_data['market_skills'].split(','))
+        match_ratio = len(user_skills & market_skills) / len(market_skills)
+        score += round(25 * match_ratio)
+    
+    return score
+
+def generate_analysis(resume, job_intention, market_data, score):
+    """生成优势分析和提升建议"""
+    advantages = []
+    suggestions = []
+    
+    # 分析优势
+    if score >= 80:
+        advantages.append("您的综合竞争力较强，属于市场上的优秀人才")
+    
+    if resume['education'] in ['博士', '硕士']:
+        advantages.append("您的学历背景具有显著优势")
+    
+    if resume['project_count'] >= 3:
+        advantages.append("您拥有丰富的项目经验")
+    
+    if resume['skills']:
+        user_skills = set(resume['skills'].split(','))
+        market_skills = set(market_data['market_skills'].split(',')) if market_data['market_skills'] else set()
+        match_ratio = len(user_skills & market_skills) / len(market_skills) if market_skills else 0
+        
+        if match_ratio >= 0.7:
+            advantages.append("您的技能组合与市场需求高度匹配")
+    
+    # 生成建议
+    if score < 80:
+        suggestions.append("建议继续提升专业技能，增加实践项目经验")
+    
+    if resume['education'] not in ['博士', '硕士', '本科']:
+        suggestions.append("建议考虑提升学历背景，报考相关专业进修")
+    
+    if resume['project_count'] < 3:
+        suggestions.append("建议积累更多的项目经验，特别是与目标职位相关的项目")
+    
+    if market_data['market_skills']:
+        user_skills = set(resume['skills'].split(',')) if resume['skills'] else set()
+        market_skills = set(market_data['market_skills'].split(','))
+        missing_skills = market_skills - user_skills
+        
+        if missing_skills:
+            suggestions.append(f"建议学习以下热门技能：{', '.join(list(missing_skills)[:3])}")
+    
+    return advantages, suggestions
+
+@app.route('/admin')
+@login_required
+def admin():
+    # 检查是否是管理员
+    if session.get('username') != 'admin':
+        return redirect(url_for('index'))
+        
+    cursor = get_db().cursor()
+    cursor.execute('SELECT id, username, telephone, created_at FROM users')
+    users = cursor.fetchall()
+    return render_template('admin.html', users=users)
+
+@app.route('/api/admin/dau')
+@login_required
+def get_dau():
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': '无权限'})
+        
+    try:
+        # 使用模拟数据替代数据库查询
+        dates = ['2024-03-10', '2024-03-11', '2024-03-12', '2024-03-13', 
+                '2024-03-14', '2024-03-15', '2024-03-16']
+        counts = [42, 58, 65, 73, 82, 91, 105]
+        
+        return jsonify({
+            'success': True,
+            'dates': dates,
+            'counts': counts
+        })
+    except Exception as e:
+        print(f"获取日活数据错误: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/admin/register-trend')
+@login_required
+def get_register_trend():
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': '无权限'})
+    
+    try:
+        # 使用模拟数据替代数据库查询
+        dates = ['2024-01-15', '2024-01-25', '2024-02-05', '2024-02-15', 
+                '2024-02-25', '2024-03-05', '2024-03-15']
+        counts = [15, 23, 28, 35, 42, 56, 68]
+        
+        return jsonify({
+            'success': True,
+            'dates': dates,
+            'counts': counts
+        })
+    except Exception as e:
+        print(f"获取注册趋势数据错误: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/admin/user/<int:user_id>', methods=['GET'])
+@login_required
+def get_user(user_id):
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': '无权限'})
+        
+    cursor = get_db().cursor()
+    cursor.execute('SELECT id, username, telephone FROM users WHERE id = %s', (user_id,))
+    user = cursor.fetchone()
+    
+    if not user:
+        return jsonify({'success': False, 'message': '用户不存在'})
+        
+    return jsonify({
+        'success': True,
+        'user': user
+    })
+
+@app.route('/api/admin/user', methods=['POST'])
+@login_required
+def add_user():
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': '无权限'})
+        
+    data = request.json
+    username = data.get('username')
+    telephone = data.get('telephone')
+    password = data.get('password')
+    
+    if not all([username, telephone, password]):
+        return jsonify({'success': False, 'message': '请填写完整信息'})
+    
+    try:
+        db = get_db()
+        with db.cursor() as cursor:
+            # 检查用户名是否已存在
+            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': '用户名已存在'})
+            
+            # 检查手机号是否已存在
+            cursor.execute("SELECT id FROM users WHERE telephone = %s", (telephone,))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': '手机号已被注册'})
+            
+            # 创建新用户
+            cursor.execute(
+                'INSERT INTO users (username, telephone, password) VALUES (%s, %s, %s)',
+                (username, telephone, generate_password_hash(password))
+            )
+            db.commit()
+            return jsonify({'success': True, 'message': '添加用户成功'})
+    except Exception as e:
+        if 'db' in locals():
+            db.rollback()
+        print(f"添加用户错误: {str(e)}")
+        return jsonify({'success': False, 'message': f'添加用户失败：{str(e)}'})
+    finally:
+        if 'db' in locals():
+            db.close()
+
+@app.route('/api/admin/user/<int:user_id>', methods=['PUT'])
+@login_required
+def update_user(user_id):
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': '无权限'})
+        
+    data = request.json
+    username = data.get('username')
+    telephone = data.get('telephone')
+    password = data.get('password')
+    
+    if not all([username, telephone]):
+        return jsonify({'success': False, 'message': '请填写完整信息'})
+    
+    try:
+        db = get_db()
+        with db.cursor() as cursor:
+            # 检查用户是否存在
+            cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'success': False, 'message': '用户不存在'})
+            
+            # 如果是admin用户，不允许修改用户名
+            if user['username'] == 'admin' and username != 'admin':
+                return jsonify({'success': False, 'message': '不能修改管理员用户名'})
+            
+            # 检查用户名是否已被其他用户使用
+            cursor.execute('SELECT id FROM users WHERE username = %s AND id != %s', (username, user_id))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': '用户名已被使用'})
+            
+            # 检查手机号是否已被其他用户使用
+            cursor.execute('SELECT id FROM users WHERE telephone = %s AND id != %s', (telephone, user_id))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'message': '手机号已被使用'})
+            
+            # 更新用户信息
+            if password:
+                cursor.execute(
+                    'UPDATE users SET username = %s, telephone = %s, password = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s',
+                    (username, telephone, generate_password_hash(password), user_id)
+                )
+            else:
+                cursor.execute(
+                    'UPDATE users SET username = %s, telephone = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s',
+                    (username, telephone, user_id)
+                )
+            db.commit()
+            return jsonify({'success': True, 'message': '更新成功'})
+    except Exception as e:
+        if 'db' in locals():
+            db.rollback()
+        print(f"更新用户错误: {str(e)}")
+        return jsonify({'success': False, 'message': f'更新失败：{str(e)}'})
+    finally:
+        if 'db' in locals():
+            db.close()
+
+@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
+@login_required
+def delete_user(user_id):
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': '无权限'})
+    
+    try:
+        db = get_db()
+        with db.cursor() as cursor:
+            # 检查用户是否存在
+            cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'success': False, 'message': '用户不存在'})
+            
+            # 不允许删除admin账号
+            if user['username'] == 'admin':
+                return jsonify({'success': False, 'message': '不能删除管理员账号'})
+            
+            # 删除用户相关数据
+            cursor.execute('DELETE FROM job_intentions WHERE user_id = %s', (user_id,))
+            cursor.execute('DELETE FROM saved_jobs WHERE user_id = %s', (user_id,))
+            cursor.execute('DELETE FROM job_applications WHERE user_id = %s', (user_id,))
+            cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+            
+            db.commit()
+            return jsonify({'success': True, 'message': '删除成功'})
+    except Exception as e:
+        if 'db' in locals():
+            db.rollback()
+        print(f"删除用户错误: {str(e)}")
+        return jsonify({'success': False, 'message': f'删除失败：{str(e)}'})
+    finally:
+        if 'db' in locals():
+            db.close()
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.get_json()
+        user_message = data.get('message')
+        
+        if not user_message:
+            return jsonify({
+                'success': False,
+                'message': '消息不能为空'
+            })
+            
+        # 设置系统提示语
+        system_prompt = """你是一个专业的求职顾问，可以帮助用户解答求职相关的问题。
+        你需要：
+        1. 提供专业、实用的建议
+        2. 回答要简洁明了
+        3. 态度要积极友好
+        4. 如果不确定的内容，要诚实地说不知道
+        5. 所有回答都使用中文
+        """
+        
+        # 调用AI接口获取回复
+        response = get_ai_response(system_prompt, user_message)
+        
+        return jsonify({
+            'success': True,
+            'response': response
+        })
+        
+    except Exception as e:
+        print(f"Chat error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'response': '抱歉，出现了一些问题，请稍后再试。'
+        })
+
+@app.route('/job/<int:job_id>')
+def job_detail(job_id):
+    try:
+        db = get_db()
+        with db.cursor() as cursor:
+            # 获取职位详情
+            cursor.execute("""
+                SELECT j.*, GROUP_CONCAT(t.tag) as tags
+                FROM jobs j
+                LEFT JOIN job_tags t ON j.id = t.job_id
+                WHERE j.id = %s
+                GROUP BY j.id
+            """, (job_id,))
+            job = cursor.fetchone()
+            
+            if not job:
+                flash('职位不存在')
+                return redirect(url_for('index'))
+            
+            # 处理标签字符串为列表
+            job['tags'] = job['tags'].split(',') if job['tags'] else []
+            
+            # 如果street字段为空，设置默认值
+            if not job.get('street'):
+                job['street'] = job['location'] + "某地"
+            
+            # 记录用户浏览行为
+            user_id = session.get('user_id')
+            if user_id:
+                try:
+                    # 检查是否已有浏览记录
+                    cursor.execute("""
+                        SELECT id, view_count FROM user_views 
+                        WHERE user_id = %s AND job_id = %s
+                    """, (user_id, job_id))
+                    view_record = cursor.fetchone()
+                    
+                    if view_record:
+                        # 更新浏览次数
+                        cursor.execute("""
+                            UPDATE user_views 
+                            SET view_count = view_count + 1, 
+                                last_viewed = CURRENT_TIMESTAMP 
+                            WHERE id = %s
+                        """, (view_record['id'],))
+                    else:
+                        # 创建新的浏览记录
+                        cursor.execute("""
+                            INSERT INTO user_views (user_id, job_id) 
+                            VALUES (%s, %s)
+                        """, (user_id, job_id))
+                    
+                    db.commit()
+                except Exception as e:
+                    print(f"记录浏览行为错误: {str(e)}")
+                    db.rollback()
+            
+            # 获取相似职位推荐 - 移除对category的引用，只使用title进行匹配
+            cursor.execute("""
+                SELECT j.*, GROUP_CONCAT(t.tag) as tags
+                FROM jobs j
+                LEFT JOIN job_tags t ON j.id = t.job_id
+                WHERE j.id != %s
+                AND j.title LIKE %s
+                GROUP BY j.id
+                ORDER BY j.created_at DESC
+                LIMIT 5
+            """, (job_id, f"%{job['title']}%"))
+            similar_jobs = cursor.fetchall()
+            
+            # 处理相似职位的标签
+            for similar_job in similar_jobs:
+                similar_job['tags'] = similar_job['tags'].split(',') if similar_job['tags'] else []
+            
+            return render_template('job_detail.html',
+                                job=job,
+                                similar_jobs=similar_jobs,
+                                user=session.get('user_id'))
+                                
+    except Exception as e:
+        print(f"职位详情页面错误: {str(e)}")
+        flash('加载职位详情失败，请重试')
+        return redirect(url_for('index'))
+    finally:
+        if 'db' in locals():
+            db.close()
+
+def get_collaborative_recommendations(user_id, limit=10):
+    """基于协同过滤的推荐算法
+    
+    参数:
+        user_id: 用户ID
+        limit: 返回的推荐职位数量
+        
+    返回:
+        推荐职位列表
+    """
+    try:
+        db = get_db()
+        with db.cursor() as cursor:
+            # 检查用户收藏职位数量
+            cursor.execute("""
+                SELECT COUNT(*) as saved_count
+                FROM saved_jobs
+                WHERE user_id = %s
+            """, (user_id,))
+            saved_result = cursor.fetchone()
+            saved_count = saved_result['saved_count'] if saved_result else 0
+            
+            # 检查用户投递职位数量
+            cursor.execute("""
+                SELECT COUNT(*) as applied_count
+                FROM job_applications
+                WHERE user_id = %s
+            """, (user_id,))
+            applied_result = cursor.fetchone()
+            applied_count = applied_result['applied_count'] if applied_result else 0
+            
+            print(f"用户ID: {user_id}, 收藏数: {saved_count}, 投递数: {applied_count}")
+            
+            # 如果用户收藏和投递的职位都少于5条，返回空列表
+            if saved_count < 5 or applied_count < 5:
+                print("收藏或投递数量不足5条，不使用协同过滤")
+                return []
+            
+            # 获取用户的行为数据（收藏和投递的职位）
+            cursor.execute("""
+                (SELECT job_id, 1 as interaction_type FROM saved_jobs WHERE user_id = %s)
+                UNION ALL
+                (SELECT job_id, 2 as interaction_type FROM job_applications WHERE user_id = %s)
+            """, (user_id, user_id))
+            user_interactions = cursor.fetchall()
+            
+            if not user_interactions:
+                print("未找到用户交互数据")
+                return []
+            
+            # 获取所有用户的收藏和投递记录
+            cursor.execute("""
+                (SELECT user_id, job_id, 1 as interaction_type FROM saved_jobs)
+                UNION ALL
+                (SELECT user_id, job_id, 2 as interaction_type FROM job_applications)
+                ORDER BY user_id, job_id
+            """)
+            all_interactions = cursor.fetchall()
+            
+            # 如果总交互记录太少，无法进行协同过滤
+            if len(all_interactions) < 10:
+                print("总交互记录不足10条")
+                return []
+            
+            # 获取所有用户和职位ID
+            cursor.execute("SELECT DISTINCT user_id FROM saved_jobs UNION SELECT DISTINCT user_id FROM job_applications")
+            all_users = [row['user_id'] for row in cursor.fetchall()]
+            
+            cursor.execute("SELECT DISTINCT job_id FROM saved_jobs UNION SELECT DISTINCT job_id FROM job_applications")
+            all_jobs = [row['job_id'] for row in cursor.fetchall()]
+            
+            # 如果用户或职位太少，无法进行协同过滤
+            if len(all_users) < 3 or len(all_jobs) < 5:
+                print(f"用户数({len(all_users)})或职位数({len(all_jobs)})不足")
+                return []
+            
+            # 构建用户-职位矩阵
+            user_job_matrix = np.zeros((len(all_users), len(all_jobs)))
+            user_index = {user: i for i, user in enumerate(all_users)}
+            job_index = {job: i for i, job in enumerate(all_jobs)}
+            
+            for interaction in all_interactions:
+                u_idx = user_index.get(interaction['user_id'])
+                j_idx = job_index.get(interaction['job_id'])
+                if u_idx is not None and j_idx is not None:
+                    # 投递的权重比收藏高
+                    weight = 2 if interaction['interaction_type'] == 2 else 1
+                    user_job_matrix[u_idx, j_idx] += weight
+            
+            # 计算用户相似度
+            user_similarity = cosine_similarity(user_job_matrix)
+            
+            # 获取当前用户索引
+            current_user_idx = user_index.get(user_id)
+            if current_user_idx is None:
+                print("未找到当前用户索引")
+                return []
+            
+            # 获取与当前用户最相似的用户
+            similar_users = [(i, user_similarity[current_user_idx, i]) 
+                            for i in range(len(all_users)) if i != current_user_idx]
+            similar_users.sort(key=lambda x: x[1], reverse=True)
+            similar_users = similar_users[:5]  # 取前5个最相似的用户
+            
+            if not similar_users:
+                print("未找到相似用户")
+                return []
+            
+            # 获取当前用户已交互的职位
+            user_job_ids = [interaction['job_id'] for interaction in user_interactions]
+            
+            # 获取相似用户交互过但当前用户未交互的职位
+            recommended_jobs = {}
+            for user_idx, similarity in similar_users:
+                if similarity <= 0:
+                    continue
+                    
+                similar_user_id = all_users[user_idx]
+                cursor.execute("""
+                    (SELECT job_id FROM saved_jobs WHERE user_id = %s)
+                    UNION
+                    (SELECT job_id FROM job_applications WHERE user_id = %s)
+                """, (similar_user_id, similar_user_id))
+                
+                for row in cursor.fetchall():
+                    job_id = row['job_id']
+                    if job_id not in user_job_ids:
+                        score = similarity
+                        if job_id in recommended_jobs:
+                            recommended_jobs[job_id] += score
+                        else:
+                            recommended_jobs[job_id] = score
+            
+            # 按得分排序并获取前N个推荐
+            sorted_recommendations = sorted(recommended_jobs.items(), 
+                                          key=lambda x: x[1], reverse=True)
+            recommended_job_ids = [job_id for job_id, _ in sorted_recommendations[:limit]]
+            
+            if not recommended_job_ids:
+                print("没有推荐结果")
+                return []
+            
+            # 获取推荐职位的详细信息
+            placeholders = ', '.join(['%s'] * len(recommended_job_ids))
+            cursor.execute(f"""
+                SELECT j.*, GROUP_CONCAT(t.tag) as tags
+                FROM jobs j
+                LEFT JOIN job_tags t ON j.id = t.job_id
+                WHERE j.id IN ({placeholders})
+                GROUP BY j.id
+            """, recommended_job_ids)
+            
+            recommended_jobs = cursor.fetchall()
+            
+            # 处理标签
+            for job in recommended_jobs:
+                job['tags'] = job['tags'].split(',') if job['tags'] else []
+            
+            print(f"协同过滤推荐成功，共{len(recommended_jobs)}个结果")
+            return recommended_jobs
+            
+    except Exception as e:
+        print(f"协同推荐算法错误: {str(e)}")
+        return []
+    finally:
+        if 'db' in locals():
+            db.close()
 
 if __name__ == '__main__':
     app.run(debug=True) 

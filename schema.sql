@@ -38,6 +38,7 @@ CREATE TABLE jobs (
     category VARCHAR(50),
     salary VARCHAR(50),
     location VARCHAR(50),
+    street VARCHAR(255),
     experience VARCHAR(50),
     education VARCHAR(50),
     job_type VARCHAR(20),
@@ -91,13 +92,26 @@ CREATE TABLE interviews (
     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
 );
 
+-- 用户浏览记录表
+CREATE TABLE user_views (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    job_id INT NOT NULL,
+    view_count INT DEFAULT 1,
+    last_viewed TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_view (user_id, job_id)
+);
+
 -- 插入示例职位数据
-INSERT INTO jobs (title, company_name, company_logo, category, salary, location, experience, education, job_type, description) 
+INSERT INTO jobs (title, company_name, company_logo, category, salary, location, street, experience, education, job_type, description) 
 VALUES 
-('算法工程师', '字节跳动', 'static/企业.png', '算法', '25k-35k', '北京', '1-3年', '本科及以上', '全职', '负责算法研发和优化'),
-('前端开发工程师', '腾讯', 'static/企业.png', '开发', '20k-30k', '深圳', '1-3年', '本科及以上', '全职', '负责前端开发工作'),
-('后端开发工程师', '阿里巴巴', 'static/企业.png', '开发', '25k-40k', '杭州', '3-5年', '本科及以上', '全职', '负责后端系统开发'),
-('数据分析师', '网易', 'static/企业.png', '数据', '18k-25k', '广州', '1-3年', '本科及以上', '全职', '负责数据分析工作');
+('算法工程师', '字节跳动', 'static/企业.png', '算法', '25k-35k', '北京', '北京市海淀区中关村软件园二期西区8号楼', '1-3年', '本科及以上', '全职', '负责算法研发和优化'),
+('前端开发工程师', '腾讯', 'static/企业.png', '开发', '20k-30k', '深圳', '深圳市南山区科技园腾讯大厦', '1-3年', '本科及以上', '全职', '负责前端开发工作'),
+('后端开发工程师', '阿里巴巴', 'static/企业.png', '开发', '25k-40k', '杭州', '杭州市余杭区文一西路969号阿里巴巴西溪园区', '3-5年', '本科及以上', '全职', '负责后端系统开发'),
+('数据分析师', '网易', 'static/企业.png', '数据', '18k-25k', '广州', '广州市天河区科韵路16号网易大厦', '1-3年', '本科及以上', '全职', '负责数据分析工作');
 
 -- 插入职位标签
 INSERT INTO job_tags (job_id, tag) VALUES 

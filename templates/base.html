@@ -12,8 +12,12 @@
     <header>
         <nav>
             <ul>
-                <li><a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active" {% endif
-                        %}>求职推荐平台</a></li>
+                <li>
+                    <a href="{{ url_for('index') }}" {% if request.endpoint=='index' %}class="active" {% endif %}>
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="logo" class="nav-logo">
+                        C职识
+                    </a>
+                </li>
                 <li><a href="{{ url_for('competitive_analysis') }}" {% if request.endpoint=='competitive_analysis'
                         %}class="active" {% endif %}>个人竞争力评估</a></li>
                 <li><a href="{{ url_for('job_analysis') }}" {% if request.endpoint=='job_analysis' %}class="active" {%
@@ -22,9 +26,16 @@
                         %}>我的简历</a></li>
                 <li><a href="{{ url_for('mock_interview') }}" {% if request.endpoint=='mock_interview' %}class="active"
                         {% endif %}>模拟面试</a></li>
+                <li><a href="http://127.0.0.1:8501" target="_blank">知识库问答</a></li>
                 <li><a href="{{ url_for('personal_center') }}" {% if request.endpoint=='personal_center'
                         %}class="active" {% endif %}>个人中心</a></li>
             </ul>
+            <div class="nav-search">
+                <form action="{{ url_for('index') }}" method="GET">
+                    <input type="text" name="search" placeholder="搜索职位或公司..." class="search-input">
+                    <button type="submit" class="search-btn">搜索</button>
+                </form>
+            </div>
             <div class="auth-buttons">
                 {% if user %}
                 <span class="username">{{ user }}</span>

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}{{ job.title }} - C职识{% endblock %}
+
+{% block extra_head %}
+<!-- 引入腾讯地图API -->
+<script charset="utf-8" src="https://map.qq.com/api/js?v=2.exp&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77"></script>
+<style>
+    #map-container {
+        width: 100%;
+        height: 400px;
+        margin-top: 10px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="job-detail-container">
+    <div class="job-detail-header">
+        <div class="job-basic-info">
+            <h1 class="job-title">{{ job.title }}</h1>
+            <div class="job-salary">{{ job.salary }}</div>
+            <div class="job-tags">
+                {% for tag in job.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="company-info">
+            <img src="{{ job.company_logo }}" alt="{{ job.company_name }}" class="company-logo">
+            <div class="company-name">{{ job.company_name }}</div>
+        </div>
+    </div>
+
+    <div class="job-detail-content">
+        <div class="job-main-content">
+            <div class="job-section">
+                <h2 class="section-title">职位要求</h2>
+                <div class="job-requirements">
+                    <div class="requirement-item">
+                        <i class="icon-location"></i>
+                        <span>工作地点：{{ job.location }}</span>
+                    </div>
+                    <div class="requirement-item">
+                        <i class="icon-experience"></i>
+                        <span>经验要求：{{ job.experience }}</span>
+                    </div>
+                    <div class="requirement-item">
+                        <i class="icon-education"></i>
+                        <span>学历要求：{{ job.education }}</span>
+                    </div>
+                    <div class="requirement-item">
+                        <i class="icon-type"></i>
+                        <span>工作类型：{{ job.job_type }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="job-section">
+                <h2 class="section-title">职位描述</h2>
+                <div class="job-description">
+                    {% if job.description %}
+                    {{ job.description|safe }}
+                    {% else %}
+                    <p>暂无详细描述</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if job.responsibilities %}
+            <div class="job-section">
+                <h2 class="section-title">岗位职责</h2>
+                <div class="job-responsibilities">
+                    {{ job.responsibilities|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if job.qualifications %}
+            <div class="job-section">
+                <h2 class="section-title">任职要求</h2>
+                <div class="job-qualifications">
+                    {{ job.qualifications|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if job.benefits %}
+            <div class="job-section">
+                <h2 class="section-title">公司福利</h2>
+                <div class="job-benefits">
+                    {{ job.benefits|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 添加地图部分 -->
+            <div class="job-section">
+                <h2 class="section-title">工作地点</h2>
+                <div id="map-container"></div>
+            </div>
+        </div>
+
+        <div class="job-sidebar">
+            <div class="action-buttons">
+                <button class="apply-btn" onclick="applyJob('{{ job.id }}')">立即申请</button>
+                <button class="save-btn" onclick="saveJob('{{ job.id }}')">收藏职位</button>
+            </div>
+
+            <div class="company-card">
+                <h3>公司信息</h3>
+                <div class="company-detail">
+                    <p><strong>公司名称：</strong>{{ job.company_name }}</p>
+                    {% if job.company_size %}
+                    <p><strong>公司规模：</strong>{{ job.company_size }}</p>
+                    {% endif %}
+                    {% if job.company_industry %}
+                    <p><strong>公司行业：</strong>{{ job.company_industry }}</p>
+                    {% endif %}
+                    {% if job.company_address %}
+                    <p><strong>公司地址：</strong>{{ job.company_address }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="similar-jobs">
+                <h3>相似职位推荐</h3>
+                <div class="similar-jobs-list">
+                    {% for similar_job in similar_jobs %}
+                    <div class="similar-job-item">
+                        <a href="{{ url_for('job_detail', job_id=similar_job.id) }}">
+                            <div class="similar-job-title">{{ similar_job.title }}</div>
+                            <div class="similar-job-company">{{ similar_job.company_name }}</div>
+                            <div class="similar-job-salary">{{ similar_job.salary }}</div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function applyJob(jobId) {
+        {% if user %}
+        // 发送申请请求
+        fetch('/apply-job/' + jobId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('申请成功！');
+                } else {
+                    alert(data.message);
+                }
+            });
+        {% else %}
+        window.location.href = "{{ url_for('login') }}";
+        {% endif %}
+    }
+
+    function saveJob(jobId) {
+        {% if user %}
+        // 发送收藏请求
+        fetch('/save-job/' + jobId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('收藏成功！');
+                } else {
+                    alert(data.message);
+                }
+            });
+        {% else %}
+        window.location.href = "{{ url_for('login') }}";
+        {% endif %}
+    }
+
+    // 初始化地图
+    let map; // 全局地图对象
+    let currentLocation; // 当前位置
+    let markers = []; // 存储所有标记
+
+    window.onload = function () {
+        // 获取公司名称和地址信息
+        const companyName = "{{ job.company_name }}";
+        const location = "{{ job.location }}";
+        const street = "{{ job.street }}";
+
+        // 优先使用公司名称进行搜索，如果没有则使用地址
+        const searchKeyword = companyName + " " + (street || location);
+
+        if (!searchKeyword) {
+            document.getElementById('map-container').innerHTML = '<p>暂无地址信息</p>';
+            return;
+        }
+
+        // 初始化地图
+        const center = new qq.maps.LatLng(39.916527, 116.397128); // 默认北京
+        map = new qq.maps.Map(document.getElementById('map-container'), {
+            center: center,
+            zoom: 13
+        });
+
+        // 地址解析
+        const geocoder = new qq.maps.Geocoder();
+        geocoder.getLocation(searchKeyword);
+
+        // 设置回调函数
+        geocoder.setComplete(function (result) {
+            currentLocation = result.detail.location;
+            map.setCenter(currentLocation);
+
+            // 添加标记
+            const marker = new qq.maps.Marker({
+                position: currentLocation,
+                map: map
+            });
+            markers.push(marker);
+
+            // 添加信息窗口
+            const info = new qq.maps.InfoWindow({
+                map: map
+            });
+
+            info.open();
+            info.setContent(`<div style="padding:5px;"><strong>${companyName}</strong><br>${street || location}</div>`);
+            info.setPosition(currentLocation);
+        });
+
+        // 设置错误处理
+        geocoder.setError(function () {
+            // 如果公司名称搜索失败，尝试仅使用地址搜索
+            if (street || location) {
+                const address = street || location;
+                console.log("公司名称搜索失败，尝试使用地址搜索：" + address);
+
+                // 创建新的地理编码器进行第二次搜索
+                const fallbackGeocoder = new qq.maps.Geocoder();
+
+                // 设置第二次搜索的回调
+                fallbackGeocoder.setComplete(function (result) {
+                    currentLocation = result.detail.location;
+                    map.setCenter(currentLocation);
+
+                    // 添加标记
+                    const marker = new qq.maps.Marker({
+                        position: currentLocation,
+                        map: map
+                    });
+                    markers.push(marker);
+
+                    // 添加信息窗口
+                    const info = new qq.maps.InfoWindow({
+                        map: map
+                    });
+
+                    info.open();
+                    info.setContent(`<div style="padding:5px;"><strong>${companyName}</strong><br>${address}</div>`);
+                    info.setPosition(currentLocation);
+                });
+
+                // 设置第二次搜索的错误处理
+                fallbackGeocoder.setError(function () {
+                    document.getElementById('map-container').innerHTML =
+                        `<p>无法找到位置: ${address}，请检查地址信息</p>`;
+                });
+
+                // 执行第二次搜索
+                fallbackGeocoder.getLocation(address);
+            } else {
+                document.getElementById('map-container').innerHTML =
+                    `<p>无法找到位置: ${searchKeyword}，请检查信息</p>`;
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -14,11 +14,14 @@
         <div class="filter-section">
             <select id="jobCategory" onchange="updateCharts()">
                 <option value="all">全部岗位</option>
-                <option value="frontend">前端开发</option>
-                <option value="backend">后端开发</option>
-                <option value="algorithm">算法工程师</option>
-                <option value="data">数据分析师</option>
-                <option value="product">产品经理</option>
+                <option value="开发">开发</option>
+                <option value="算法">算法</option>
+                <option value="数据">数据</option>
+                <option value="测试">测试</option>
+                <option value="运维">运维</option>
+                <option value="产品">产品</option>
+                <option value="设计">设计</option>
+                <option value="安全">安全</option>
             </select>
             <select id="timeRange" onchange="updateCharts()">
                 <option value="7">近7天</option>
@@ -205,7 +208,7 @@
             }
 
             // 更新城市分布图表
-            const cityResponse = await fetch(`/api/job-analysis/city-distribution?time_range=${timeRange}`);
+            const cityResponse = await fetch(`/api/job-analysis/city-distribution?category=${category}&time_range=${timeRange}`);
             const cityData = await cityResponse.json();
 
             if (cityData.success) {
